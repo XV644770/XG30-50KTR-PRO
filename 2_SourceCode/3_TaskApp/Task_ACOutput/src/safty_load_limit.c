@@ -928,9 +928,9 @@ static void RempptPowerDerating(void)
 static void InvCurrLimit(void)
 {
 	int16 wInvActiveCurrRefTmp,wInvReactiveCurrRefTmp;
-	Uint16 uwReactiveCurrStep,uwActiveCurrStep;
+	int16 uwReactiveCurrStep,uwActiveCurrStep;
 	static int16 swInvActiveCurrRef,swInvReactiveCurrRef;
-	static int16    swActivePowerPercentAdj,swInvReactiveCurrRefAdj;
+	static int16 swActivePowerPercentAdj,swInvReactiveCurrRefAdj;
 
 	if(STRANDARD_TAIWAI == stDspReceData.unSafetyOdm.bit.SafetyStandard)
 	{

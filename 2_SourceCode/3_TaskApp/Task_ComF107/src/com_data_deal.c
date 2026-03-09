@@ -164,8 +164,8 @@ void DealComPowerData(void)
 			/***************Active Power confirmation***************************/
 			if(1==stF107Data.unEnable.bit.OverLoad)
 			{
-					stDspReceData.udOutputActivePower = (INT32U)stDspReceData.uwSettingPower * 1100;				// Unit 0.1w	OverLoad 1.1
-					stDspReceData.udOutputApparentPower = stDspReceData.udOutputActivePower;
+				stDspReceData.udOutputActivePower = (INT32U)stDspReceData.uwSettingPower * 1100;				// Unit 0.1w	OverLoad 1.1
+				stDspReceData.udOutputApparentPower = stDspReceData.udOutputActivePower;
 			}
 			else
 			{

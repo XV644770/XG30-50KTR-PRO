@@ -742,10 +742,10 @@ void ComAfci_FaultDiagn(void)
                 stSysFaultReg.unFaultBit.bit.AFCIFault = 0;
                 stAfciPara.uwAFCI_FaultMisFlag = 1;
             }
-            else if((stDCSample.wBTCurr[PVA]<64)
-            &&(stDCSample.wBTCurr[PVB]<64)
-            &&(stDCSample.wBTCurr[PVC]<64)
-            &&(stDCSample.wBTCurr[PVD]<64))
+            else if((stDCSample.wBTCurr[PVA]<200)           // 2A
+            &&(stDCSample.wBTCurr[PVB]<200)
+            &&(stDCSample.wBTCurr[PVC]<200)
+            &&(stDCSample.wBTCurr[PVD]<200))
             {
                 stSysFaultReg.unFaultBit.bit.AFCIFault = 0;
                 stAfciPara.uwAFCI_FaultMisFlag = 1;
@@ -757,16 +757,28 @@ void ComAfci_FaultDiagn(void)
                 stAfciPara.uwAFCI_FaultMisFlag = 1;
                 AFCIFaultErrFlag = 0;
             }
-//            else if(0 != stLoadLimit.uwDeratingMode)
-//            {
-//                stSysFaultReg.unFaultBit.bit.AFCIFault = 0;
-//                stAfciPara.uwAFCI_FaultMisFlag = 1;
-//                AFCIFaultErrFlag = 0;
-//            }
-            else if((labs(PVACurrentOld - stDCSample.wBTCurr[PVA]) >= 160)//5A*32
-                   ||(labs(PVBCurrentOld - stDCSample.wBTCurr[PVB]) >= 160)
-                   ||(labs(PVCCurrentOld - stDCSample.wBTCurr[PVC]) >= 160)
-                   ||(labs(PVDCurrentOld - stDCSample.wBTCurr[PVD]) >= 160))
+            else if(0 != stLoadLimit.uwDeratingMode)
+            {
+                stSysFaultReg.unFaultBit.bit.AFCIFault = 0;
+                stAfciPara.uwAFCI_FaultMisFlag = 1;
+                AFCIFaultErrFlag = 0;
+            }
+            else if(0 != stInvPwm.uwPwmDisableDelayCnt)
+            {
+                stSysFaultReg.unFaultBit.bit.AFCIFault = 0;
+                stAfciPara.uwAFCI_FaultMisFlag = 1;
+                AFCIFaultErrFlag = 0;
+            }
+            else if(0 != stInvPwm.unPwmDisableBit.bit.LowVoltThrough)
+            {
+                stSysFaultReg.unFaultBit.bit.AFCIFault = 0;
+                stAfciPara.uwAFCI_FaultMisFlag = 1;
+                AFCIFaultErrFlag = 0;
+            }
+            else if((labs(PVACurrentOld - stDCSample.wBTCurr[PVA]) >= 500)//5A*32
+                   ||(labs(PVBCurrentOld - stDCSample.wBTCurr[PVB]) >= 500)
+                   ||(labs(PVCCurrentOld - stDCSample.wBTCurr[PVC]) >= 500)
+                   ||(labs(PVDCurrentOld - stDCSample.wBTCurr[PVD]) >= 500))
             {
                 stSysFaultReg.unFaultBit.bit.AFCIFault = 0;
                 stAfciPara.uwAFCI_FaultMisFlag = 1;
@@ -774,28 +786,28 @@ void ComAfci_FaultDiagn(void)
             }
             else
             {
-                if((stAfciPara.uwArcFaultBit& 0x01) && (stDCSample.wBTCurr[PVA] > 64))
+                if((stAfciPara.uwArcFaultBit& 0x01) && (stDCSample.wBTCurr[PVA] > 200))
                 {
                     AFCIFaultErrFlag = 1;
                     stAfciPara.uwArcFaultTimers++;
                     stSysFaultReg.unFaultBit.bit.AFCIFault = 1;
                     stSysFaultReg.unAFCIFault.bit.OverLimitStr1 = 1;
                 }
-                if((stAfciPara.uwArcFaultBit& 0x02) && (stDCSample.wBTCurr[PVB] > 64))
+                if((stAfciPara.uwArcFaultBit& 0x02) && (stDCSample.wBTCurr[PVB] > 200))
                 {
                     AFCIFaultErrFlag = 1;
                     stAfciPara.uwArcFaultTimers++;
                     stSysFaultReg.unFaultBit.bit.AFCIFault = 1;
                     stSysFaultReg.unAFCIFault.bit.OverLimitStr2 = 1;
                 }
-                if((stAfciPara.uwArcFaultBit& 0x04) && (stDCSample.wBTCurr[PVC] > 64))
+                if((stAfciPara.uwArcFaultBit& 0x04) && (stDCSample.wBTCurr[PVC] > 200))
                 {
                     AFCIFaultErrFlag = 1;
                     stAfciPara.uwArcFaultTimers++;
                     stSysFaultReg.unFaultBit.bit.AFCIFault = 1;
                     stSysFaultReg.unAFCIFault.bit.OverLimitStr3 = 1;
                 }
-                if((stAfciPara.uwArcFaultBit& 0x08) && (stDCSample.wBTCurr[PVD] > 64))
+                if((stAfciPara.uwArcFaultBit& 0x08) && (stDCSample.wBTCurr[PVD] > 200))
                 {
                     AFCIFaultErrFlag = 1;
                     stAfciPara.uwArcFaultTimers++;

@@ -179,6 +179,69 @@ static void m_QUWave(ST_QUWAVE *pstQUWave_s)
 	ReactivePercentCtrl(sdwReactPowerCmdVar);
 }
 
+static void ReactiveQvCtrl(void)
+{
+	Uint16	uwTaiWan_ACNormalVolt = 3810;//tai wan grid voltage
+	stQUWave.stIn.uwGridSpec = stDspReceData.unSafetyOdm.bit.SafetyStandard;
+	stQUWave.stIn.uwGridVoltRmsMax = stACSample.wLineVoltRmsMax;
+	stQUWave.stIn.uwHighVoltStartPoint = stF107Data.uwQvHighVoltStartPoint;
+	stQUWave.stIn.uwHighVoltEndPoint = stF107Data.uwQvHighVoltEndPoint;
+	stQUWave.stIn.wQperbyVhi = (int16)stF107Data.uwQvHighVoltReactivePrt;
+	stQUWave.stIn.uwLowVoltStartPoint = stF107Data.uwQvLowVoltStartPoint;
+	stQUWave.stIn.uwLowVoltEndPoint = stF107Data.uwQvLowVoltEndPoint;
+	stQUWave.stIn.wQperbyVlo = (int16)stF107Data.uwQvLowVoltReactivePrt;
+	stQUWave.stIn.uwPowerLockIn = 200;		// 20% Power Enter Qv
+	stQUWave.stIn.uwPowerLockOut = 100;			// 10% Power Quit Qv
+
+	//tai'wan AEC
+	stQUWave.stIn.uwPFStartVolt = (Uint32)uwTaiWan_ACNormalVolt * stF107Data.uwDeratPFVoltPrt / 100;
+	stQUWave.stIn.uwPFBackVolt = (Uint32)uwTaiWan_ACNormalVolt * (stF107Data.uwDeratPFVoltPrt - 1) / 100;
+	stQUWave.stIn.uwPFEndPoint = stF107Data.uwQvPFAutoAdjustPF;
+	
+	stQUWave.stIn.uwPowerStartVolt = (Uint32)stF107Data.uwQvPFPvHighVoltPrt * uwTaiWan_ACNormalVolt / 100;
+	stQUWave.stIn.uwPowerBackVolt = (Uint32)(stF107Data.uwQvPFPvHighVoltPrt - 1) * uwTaiWan_ACNormalVolt / 100;//back Volt default to (stF107Data.uwQvPFPvHighVoltPrt - 1%)
+	stQUWave.stIn.uwPowerEndPoint = (Uint32)stDspReceData.udOutputActivePower * stF107Data.uwQvPFAutoAdjustPower / 1000;
+	
+	stQUWave.stIn.uwAutoAdjustPower = (Uint32)stF107Data.uwQvPFAutoAdjustPower;
+	stQUWave.stIn.uwLoadLimitVolt =105;
+	
+	if(STRANDARD_TAIWAI == stDspReceData.unSafetyOdm.bit.SafetyStandard
+	&& MACHINE_ID_Plus_25_30KW == stSysCfg.uwMachineType)
+	{
+		m_QUPFWave(&stQUWave);
+		if(DC_SOURCE == stSysCfg.eMpptMode)
+		{
+			stSysCfg.uwFastDCMode = 1;
+		}
+		else
+		{
+			stSysCfg.uwFastDCMode = 0;
+		}
+	}
+	else
+	{
+		m_QUWave(&stQUWave);
+	}
+			
+}
+static void ActivePFCtrl(int16	wActivePercent)
+{
+    static Uint16 swPowerPFValue;
+
+	swPowerPFValue= (5500-wActivePercent)/5;		// y = -0.2*(x-5500)
+
+	ReactivePFCtrl(swPowerPFValue);
+}
+
+static void ReactiveQPCtrl(void)
+{
+    stQPWave.stIn.uwPowerPercent = stF107Data.uwActiveRate;   //~{SP9&9&BJ0Y7V1H~}
+    stQPWave.stIn.uwGridVoltRmsMax = (Uint16)stACSample.wLineVoltRmsMaxAvg;   //~{Wn4sO_5gQ9~}
+    stQPWave.stIn.dwCurrentActPower = (Uint32)stACSample.dActivePowerAvg;     //~{51G09&BJ~}
+    stQPWave.stIn.dwRateActiveOutput = stDspReceData.udOutputActivePower;    //~{6n6(9&BJ~}
+
+    m_QPWave(&stQPWave);
+}
 static void m_QUPFWave(ST_QUWAVE *pstQUWave_s)
 {
 	static Uint16 suwPFReduceFlag = 0;
@@ -427,69 +490,7 @@ static void m_QPWave(ST_QPWAVE *pstQPWave_s)
     stLoadLimit.dActPowerReactiveLimit = pstQPWave_s->stIn.dwRateActiveOutput*pstQPWave_s->stIn.uwPowerPercent/1000;
     stLoadLimit.dReactivePowerRef = sdwReactPowerCmdVar;
 }
-static void ReactiveQvCtrl(void)
-{
-	Uint16	uwTaiWan_ACNormalVolt = 3810;//tai wan grid voltage
-	stQUWave.stIn.uwGridSpec = stDspReceData.unSafetyOdm.bit.SafetyStandard;
-	stQUWave.stIn.uwGridVoltRmsMax = stACSample.wLineVoltRmsMax;
-	stQUWave.stIn.uwHighVoltStartPoint = stF107Data.uwQvHighVoltStartPoint;
-	stQUWave.stIn.uwHighVoltEndPoint = stF107Data.uwQvHighVoltEndPoint;
-	stQUWave.stIn.wQperbyVhi = (int16)stF107Data.uwQvHighVoltReactivePrt;
-	stQUWave.stIn.uwLowVoltStartPoint = stF107Data.uwQvLowVoltStartPoint;
-	stQUWave.stIn.uwLowVoltEndPoint = stF107Data.uwQvLowVoltEndPoint;
-	stQUWave.stIn.wQperbyVlo = (int16)stF107Data.uwQvLowVoltReactivePrt;
-	stQUWave.stIn.uwPowerLockIn = 200;		// 20% Power Enter Qv
-	stQUWave.stIn.uwPowerLockOut = 100;			// 10% Power Quit Qv
 
-	//tai'wan AEC
-	stQUWave.stIn.uwPFStartVolt = (Uint32)uwTaiWan_ACNormalVolt * stF107Data.uwDeratPFVoltPrt / 100;
-	stQUWave.stIn.uwPFBackVolt = (Uint32)uwTaiWan_ACNormalVolt * (stF107Data.uwDeratPFVoltPrt - 1) / 100;
-	stQUWave.stIn.uwPFEndPoint = stF107Data.uwQvPFAutoAdjustPF;
-	
-	stQUWave.stIn.uwPowerStartVolt = (Uint32)stF107Data.uwQvPFPvHighVoltPrt * uwTaiWan_ACNormalVolt / 100;
-	stQUWave.stIn.uwPowerBackVolt = (Uint32)(stF107Data.uwQvPFPvHighVoltPrt - 1) * uwTaiWan_ACNormalVolt / 100;//back Volt default to (stF107Data.uwQvPFPvHighVoltPrt - 1%)
-	stQUWave.stIn.uwPowerEndPoint = (Uint32)stDspReceData.udOutputActivePower * stF107Data.uwQvPFAutoAdjustPower / 1000;
-	
-	stQUWave.stIn.uwAutoAdjustPower = (Uint32)stF107Data.uwQvPFAutoAdjustPower;
-	stQUWave.stIn.uwLoadLimitVolt =105;
-	
-	if(STRANDARD_TAIWAI == stDspReceData.unSafetyOdm.bit.SafetyStandard
-	&& MACHINE_ID_Plus_25_30KW == stSysCfg.uwMachineType)
-	{
-		m_QUPFWave(&stQUWave);
-		if(DC_SOURCE == stSysCfg.eMpptMode)
-		{
-			stSysCfg.uwFastDCMode = 1;
-		}
-		else
-		{
-			stSysCfg.uwFastDCMode = 0;
-		}
-	}
-	else
-	{
-		m_QUWave(&stQUWave);
-	}
-			
-}
-
-static void ActivePFCtrl(int16	wActivePercent)
-{
-	static swPowerPFValue;
-
-	swPowerPFValue= (5500-wActivePercent)/5;		// y = -0.2*(x-5500)
-
-	ReactivePFCtrl(swPowerPFValue);
-}
-static void ReactiveQPCtrl(void)
-{
-    stQPWave.stIn.uwPowerPercent = stF107Data.uwActiveRate;   //~{SP9&9&BJ0Y7V1H~}
-    stQPWave.stIn.uwGridVoltRmsMax = (Uint16)stACSample.wLineVoltRmsMaxAvg;   //~{Wn4sO_5gQ9~}
-    stQPWave.stIn.dwCurrentActPower = (Uint32)stACSample.dActivePowerAvg;     //~{51G09&BJ~}
-    stQPWave.stIn.dwRateActiveOutput = stDspReceData.udOutputActivePower;    //~{6n6(9&BJ~}
-
-    m_QPWave(&stQPWave);
-}
 static void PowerPFCtrl(void)
 {
     static int16  swPowerPFValue;

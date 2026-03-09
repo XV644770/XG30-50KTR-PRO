@@ -159,7 +159,7 @@
 #define STRANDARD_FRANCE                19
 #define STRANDARD_IRELAND               20
 #define STRANDARD_TURKEY                21
-#define STRANDARD_TAIWAI					22
+#define STRANDARD_TAIWAI				22
 #define STRANDARD_ITALY_CEIO16			23
 #define STRANDARD_SLOVAKIA				24
 #define STRANDARD_ROMANIA                   25
