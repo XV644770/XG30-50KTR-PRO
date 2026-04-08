@@ -20,7 +20,7 @@
 #define	PLATFORM_CHAR				'G'			// G is on grid inverter
 #define	DSPSOFTWARE_CHAR			'A'			// 3-70K is from A to E
 #define	SOFTWARE_FORMAL			7
-#define	SOFTWARE_TEST			6
+#define	SOFTWARE_TEST			7
 
 
 #if SAMPLE_DEBUG
