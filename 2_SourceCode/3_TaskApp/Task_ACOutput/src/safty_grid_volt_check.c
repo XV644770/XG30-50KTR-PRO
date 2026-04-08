@@ -505,24 +505,10 @@ static void GridVoltLossProtection(void)
 	||(stACSample.PhaseVoltRms.wSN < PHASE_VOLT_MIN)
 	||(stACSample.PhaseVoltRms.wTN < PHASE_VOLT_MIN)))
 	{
-	    suwGridVoltLastLossCnt++;
-	    if((suwGridVoltLastLossCnt > 300)&&(1 == stInvPwm.unPwmDisableBit.bit.LowVoltThrough))
-	    {
-	          suwGridVoltLastLossCnt = 300;
-	          stSysFaultReg.unFaultBit.bit.GridVolt = 1;
-	          stSysFaultReg.unGridVoltFault.bit.UtilityLoss = 1;
-	          suwUtilityLossRecoveryCnt = 0;
-	          suwGridVoltLossCnt = 0;
-	    }
-	    else if(0 == stInvPwm.unPwmDisableBit.bit.LowVoltThrough)
-	    {
-            suwGridVoltLastLossCnt = 0;
-            stSysFaultReg.unFaultBit.bit.GridVolt = 1;
-            stSysFaultReg.unGridVoltFault.bit.UtilityLoss = 1;
-            suwUtilityLossRecoveryCnt = 0;
-            suwGridVoltLossCnt = 0;
-	    }
-
+		stSysFaultReg.unFaultBit.bit.GridVolt = 1;
+		stSysFaultReg.unGridVoltFault.bit.UtilityLoss = 1;
+		suwUtilityLossRecoveryCnt = 0;
+		suwGridVoltLossCnt = 0;
 	}
 	else if(((abs(stACSample.PhaseVoltRms.wSN-stACSample.PhaseVoltRms.wTN)<100)&&(abs(stACSample.PhaseVoltRms.wTN-2*stACSample.PhaseVoltRms.wRN)<150))
 	        ||((abs(stACSample.PhaseVoltRms.wRN-stACSample.PhaseVoltRms.wTN)<100)&&(abs(stACSample.PhaseVoltRms.wRN-2*stACSample.PhaseVoltRms.wSN)<150))
@@ -545,7 +531,6 @@ static void GridVoltLossProtection(void)
 			suwUtilityLossRecoveryCnt = 0;
 			suwGridVoltLossCnt = 0;
 			stSysFaultReg.unGridVoltFault.bit.UtilityLoss = 0;
-			suwGridVoltLastLossCnt = 0;
 		}
 	}
 }

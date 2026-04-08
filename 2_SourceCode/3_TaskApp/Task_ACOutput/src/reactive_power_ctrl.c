@@ -10,6 +10,8 @@
 ST_QUWAVE       stQUWave;
 ST_QPWAVE       stQPWave;
 
+static void m_QUPFWave(ST_QUWAVE *pstQUWave_s);
+
 static void ReactivePFCtrl(int16 wSetReactivePF)
 {
 	int16	wReactivePFAbsTmp;
