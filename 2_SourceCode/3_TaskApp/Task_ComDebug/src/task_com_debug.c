@@ -1043,10 +1043,10 @@ void RecordingWave(void)
 {
 	static Uint16 suwFaultWaveRecordCnt=0;
     Uint16 uwPoint = 0;
-    if(0 == stF107Data.uwRecordFaultEnable)
-    {
-        return;
-    }
+    // if(0 == stF107Data.uwRecordFaultEnable)
+    // {
+    //     return;
+    // }
 	if(DISABLE == stWaveRecord.uwRecordTrigger)
 	{
 		if(stSysFaultReg.uwFaultCode != 0)

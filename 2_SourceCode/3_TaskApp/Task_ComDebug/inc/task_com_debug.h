@@ -22,7 +22,7 @@
 #define WAVE_SEND_UINT16_MAX    250
 #define WAVE_CHANNELNUM_MAX    8
 
-#define IPMOS_DEBUG         0
+#define IPMOS_DEBUG         1
 #define CHANNELNUMMAX       40
 /**************SCI Tx Status**************************/
 typedef	struct{
