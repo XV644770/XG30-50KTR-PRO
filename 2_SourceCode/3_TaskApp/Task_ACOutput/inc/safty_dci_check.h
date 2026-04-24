@@ -8,6 +8,15 @@
 #ifndef SAFTY_DCI_CHECK_H
 #define SAFTY_DCI_CHECK_H
 
+#define PHASE				2
+
+typedef enum
+{
+   R_Phase,
+   S_Phase
+}  PHASE_ENUM;
+
+extern void DCICtrlLoopInit(void);
 extern void DCIAdjust(void);
 extern void DCIProtection(void);
 

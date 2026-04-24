@@ -395,8 +395,10 @@ static void InvPwmDutyCalc(ST_PWM_CALC *pstPwmCalc)
 		pstPwmCalc->stOut.wSPWMModulate = (pstPwmCalc->stOut.wSPWM-wPwmMidTmp-pstPwmCalc->stIn.wInvCurrZero);
 		pstPwmCalc->stOut.wTPWMModulate = (pstPwmCalc->stOut.wTPWM-wPwmMidTmp-pstPwmCalc->stIn.wInvCurrZero);
 
-		pstPwmCalc->stOut.wRPWMModulate += pstPwmCalc->stIn.wRDCI_PI;
-		pstPwmCalc->stOut.wSPWMModulate += pstPwmCalc->stIn.wSDCI_PI;
+		pstPwmCalc->stOut.wRPWMModulate += (int16)((int32)pstPwmCalc->stIn.wRDCI_PI* pstPwmCalc->stIn.wKPwm>>12);
+		pstPwmCalc->stOut.wSPWMModulate += (int16)((int32)pstPwmCalc->stIn.wSDCI_PI* pstPwmCalc->stIn.wKPwm>>12);
+		pstPwmCalc->stOut.wTPWMModulate -= (int16)((int32)(pstPwmCalc->stIn.wRDCI_PI + pstPwmCalc->stIn.wSDCI_PI)
+															* pstPwmCalc->stIn.wKPwm>>12);
 	}
 	else if(DPWM_MODE == pstPwmCalc->stIn.uwModulateMode)
 	{

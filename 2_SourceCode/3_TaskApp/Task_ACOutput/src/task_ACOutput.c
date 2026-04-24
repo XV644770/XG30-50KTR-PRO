@@ -23,6 +23,7 @@ void ACOutputTaskParaInit(void)
 	LoadLimitParaInit();
 	GridFreqParaInit();
 	stautotestInit();
+	DCICtrlLoopInit();
 }
 
 

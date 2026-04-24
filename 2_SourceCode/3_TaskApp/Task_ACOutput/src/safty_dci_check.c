@@ -10,6 +10,31 @@
 int16 wRDCI_PI,wSDCI_PI;
 int16 wDCI_PI_SET;
 int16 wDCI_Injection_Enable;
+ST_CTRL_LOOP stDCICtrlLoop[PHASE];
+
+void DCICtrlLoopInit(void)
+{
+	int phase;
+	for(phase = 0; phase < PHASE; phase++)
+	{
+		memset((void*)&stDCICtrlLoop[phase], 0, sizeof(stDCICtrlLoop[phase]));
+
+		stDCICtrlLoop[phase].stIn.uwCtrlLoopEnable = POSITIVE_PID;
+		stDCICtrlLoop[phase].stIn.dRef = 0;
+		stDCICtrlLoop[phase].stIn.dReal = 0;
+
+		stDCICtrlLoop[phase].stOut.dCtrlLoopOutput = 0;
+		stDCICtrlLoop[phase].stOut.dCtrlLoopRemainder = 0;
+
+		stDCICtrlLoop[phase].stPID.stIn.dKp = 800;
+		stDCICtrlLoop[phase].stPID.stIn.dKi = 1200;
+		stDCICtrlLoop[phase].stPID.stIn.dPIMax = 200;
+		stDCICtrlLoop[phase].stPID.stIn.dPIMin = -200;
+		stDCICtrlLoop[phase].stPID.stIn.dError = 0;
+		stDCICtrlLoop[phase].stPID.stOut.dErrorOld = 0;
+		stDCICtrlLoop[phase].stPID.stOut.dPIDOut = 0;
+	}
+}
 
 void DCIAdjust(void)
 {
@@ -17,77 +42,49 @@ void DCIAdjust(void)
 	static Uint16 uwDCIAdjustCnt;
 	static Uint16 uwDCICalcCnt;
 	static int16 wRDCISoftAvg,wSDCISoftAvg;
-	static int16 swRDCI_PIBak,swSDCI_PIBak;
 	if((cInverterStatus == eInverterStatus)&&(DISABLE == wDCI_Injection_Enable))
 	{
 		if(uwDCIAdjustCnt<=1500)		// 1500*20 ms = 30s
 		{
 			uwDCIAdjustCnt++;
 			uwDCICalcCnt = 0;
-			swRDCI_PIBak = 0;
-			swSDCI_PIBak = 0;
 			wRDCI_PI = 0;
 			wSDCI_PI = 0;
 			return ;
 		}
 
-		sdRDCISoftSum += stACSample.SoftDCI.wRN;
-		sdSDCISoftSum += stACSample.SoftDCI.wSN;
+		sdRDCISoftSum += (stACSample.SoftDCI.wRN - stAdcPool.RHardDCI.wOffset);
+		sdSDCISoftSum += (stACSample.SoftDCI.wSN - stAdcPool.SHardDCI.wOffset);
 
 		uwDCICalcCnt++;
-		if(uwDCICalcCnt>=4)
+		if(uwDCICalcCnt>=stDebug.ReadData.wDebug7[0])
 		{
 			wRDCISoftAvg = (sdRDCISoftSum/uwDCICalcCnt);
 			wSDCISoftAvg = (sdSDCISoftSum/uwDCICalcCnt);
+			stDebug.ReadData.wDebug5[1] = wRDCISoftAvg;
+			stDebug.ReadData.wDebug5[2] = wSDCISoftAvg;
 			uwDCICalcCnt = 0;
-			wRDCISoftAvg -= 75;
-			//wSDCISoftAvg += 25;
 
 			sdRDCISoftSum = 0;
 			sdSDCISoftSum = 0;
 
-			if(stACSample.dActivePower > 5000)	// 500w
+			if(stACSample.dActivePower > AC500W)	// 500w
 			{
-				
-				if(wRDCISoftAvg > 150)		// 100mA
-					swRDCI_PIBak -= 3;
-				else if(wRDCISoftAvg > 120)		// 100mA
-					swRDCI_PIBak -= 2;
-				else if(wRDCISoftAvg>60)		// 30mA
-					swRDCI_PIBak-=1;
-				else if(wRDCISoftAvg<=-150)
-					swRDCI_PIBak+=3;
-				else if(wRDCISoftAvg<=-120)
-					swRDCI_PIBak+=2;
-				else if(wRDCISoftAvg<=-60)
-					swRDCI_PIBak+=1;
+				stDCICtrlLoop[R_Phase].stPID.stIn.dKp = stDebug.ReadData.wDebug7[2];
+				stDCICtrlLoop[R_Phase].stPID.stIn.dKi = stDebug.ReadData.wDebug7[3];
+				stDCICtrlLoop[S_Phase].stPID.stIn.dKp = stDebug.ReadData.wDebug7[2];
+				stDCICtrlLoop[S_Phase].stPID.stIn.dKi = stDebug.ReadData.wDebug7[3];
 
-				if(wSDCISoftAvg > 150)
-					swSDCI_PIBak -=3;
-				else if(wSDCISoftAvg > 80)
-					swSDCI_PIBak -=2;
-				else if(wSDCISoftAvg > 30)
-					swSDCI_PIBak -=1;
-				else if(wSDCISoftAvg < -150)
-					swSDCI_PIBak+=3;
-				else if(wSDCISoftAvg < -80)
-					swSDCI_PIBak+=2;
-				else if(wSDCISoftAvg < -30)
-					swSDCI_PIBak+=1;
+				stDCICtrlLoop[R_Phase].stIn.dReal = wRDCISoftAvg;
+				stDCICtrlLoop[S_Phase].stIn.dReal = wSDCISoftAvg;
+				IncrementalPID(&stDCICtrlLoop[R_Phase]);
+				IncrementalPID(&stDCICtrlLoop[S_Phase]);
 
+				wRDCI_PI = stDCICtrlLoop[R_Phase].stOut.dCtrlLoopOutput;
+				wSDCI_PI = stDCICtrlLoop[S_Phase].stOut.dCtrlLoopOutput;
 
-				if(swRDCI_PIBak>=50)
-					swRDCI_PIBak=50;
-				else if(swRDCI_PIBak<=-50)
-					swRDCI_PIBak=-50;
-
-				if(swSDCI_PIBak>=50)
-					swSDCI_PIBak=50;
-				else if(swSDCI_PIBak<=-50)
-					swSDCI_PIBak=-50;
-
-				wRDCI_PI = swRDCI_PIBak;
-				wSDCI_PI = swSDCI_PIBak;
+				stDebug.ReadData.wDebug5[3] = wRDCI_PI;
+				stDebug.ReadData.wDebug5[4] = wSDCI_PI;
 			}
 		}
 	}
@@ -97,9 +94,15 @@ void DCIAdjust(void)
 		uwDCIAdjustCnt = 0;
 		sdRDCISoftSum = 0;
 		sdSDCISoftSum = 0;
-		swRDCI_PIBak = 0;
-		swSDCI_PIBak = 0;
-		
+
+		stDCICtrlLoop[R_Phase].stOut.dCtrlLoopOutput = 0;
+		stDCICtrlLoop[R_Phase].stOut.dCtrlLoopRemainder = 0;
+		stDCICtrlLoop[R_Phase].stPID.stOut.dErrorOld = 0;
+
+		stDCICtrlLoop[S_Phase].stOut.dCtrlLoopOutput = 0;
+		stDCICtrlLoop[S_Phase].stOut.dCtrlLoopRemainder = 0;
+		stDCICtrlLoop[S_Phase].stPID.stOut.dErrorOld = 0;
+
 		if(DISABLE == wDCI_Injection_Enable)
 		{
 			wRDCI_PI=0;
