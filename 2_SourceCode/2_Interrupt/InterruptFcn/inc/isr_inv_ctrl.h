@@ -1,6 +1,6 @@
 #ifndef SOLAR_INVCTRL_H              			// Prevents multiple inclusion of this file.
 #define SOLAR_INVCTRL_H
-#define RECTRL_POINTS		384//144//96//Switch_Freq/Reat_Freq
+#define RECTRL_POINTS		400//144//96//Switch_Freq/Reat_Freq
 
 typedef struct
 {

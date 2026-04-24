@@ -45,7 +45,7 @@ void InvCtrlParaInit(void)
 	stInvCurrCtrl.stIn.dReCtrl_KPR2 = 972;		// 972/1024 = 0.95
 
 		//Repeat control parameter reset
-	for(i=0;i<RECTRL_POINTS;i++)
+	for(i=0;i<stAdcPool.uwSumCnt;i++)
 	{
 		stInvCurrCtrl.stIn.ReCtrl_Id[i] = 0;
 		stInvCurrCtrl.stIn.ReCtrl_Iq[i] = 0;
@@ -339,30 +339,26 @@ void InvCurrLoopCtrl(void)
 
 		UPDNLMT(swCurr_dPI,3200,-3200);			// 3200/32 = 100.0A
 
-		stInvCurrCtrl.stOut.wOutCurr_d =	(((stInvCurrCtrl.stIn.dCurr_Kd*wCurr_dErrTmp)>>10)
-									        -((stInvCurrCtrl.stIn.dCurr_Kq*stInvPara.wCurr_q)>>10)
-									         + swCurr_dPI);
-
-			//////////////////////////////
-			//------------------Repeat control deal----------
-		    stInvCurrCtrl.stIn.ReCtrl_Pos = stInvCurrCtrl.stIn.ReCtrl_Cur + RECTRL_POINTS - stInvCurrCtrl.stIn.Rectrl_Points;
-		    if(stInvCurrCtrl.stIn.ReCtrl_Pos >= RECTRL_POINTS)
-		    {
-		        stInvCurrCtrl.stIn.ReCtrl_Pos -= RECTRL_POINTS;
-		    }
-			if(stInvCurrCtrl.stIn.ReCtrl_Enable == 1)
-			{
-			        stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] = (long)stInvCurrCtrl.stIn.dReCtrl_KPR* (stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] +stInvCurrCtrl.stOut.wOutCurr_d)>>10;
-			        stInvCurrCtrl.stIn.ReCtrl_Val_Id =  (int16)(((long)stInvCurrCtrl.stIn.dReCtrl_KPR1 * stInvCurrCtrl.stIn.ReCtrl_Val_Id>>10) +  ((long)(1024 - stInvCurrCtrl.stIn.dReCtrl_KPR1) * stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Cur]>>10));
-				//stDebug.ReadData.wDebug2=stInvCurrCtrl.stIn.ReCtrl_Val_Id;
-				UPDNLMT(stInvCurrCtrl.stIn.ReCtrl_Val_Id,200,-200);		       	     	        
-			}
-			else
-			{
-				stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] = stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] >>1;
-			        stInvCurrCtrl.stIn.ReCtrl_Val_Id = 0;
-			}
-		 stInvCurrCtrl.stIn.ReCtrl_Val_Id =   (int16)((long)stInvCurrCtrl.stIn.dReCtrl_KPR2 * stInvCurrCtrl.stIn.ReCtrl_Val_Id >>10);
+		//////////////////////////////
+		//------------------Repeat control deal----------
+		stInvCurrCtrl.stIn.ReCtrl_Pos = stInvCurrCtrl.stIn.ReCtrl_Cur + stAdcPool.uwSumCnt - stInvCurrCtrl.stIn.Rectrl_Points;
+		if(stInvCurrCtrl.stIn.ReCtrl_Pos >= stAdcPool.uwSumCnt)
+		{
+			stInvCurrCtrl.stIn.ReCtrl_Pos -= stAdcPool.uwSumCnt;
+		}
+		if(stInvCurrCtrl.stIn.ReCtrl_Enable == 1)
+		{
+			stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] = (long)stInvCurrCtrl.stIn.dReCtrl_KPR* (stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] +stInvCurrCtrl.stOut.wOutCurr_d)>>10;
+			stInvCurrCtrl.stIn.ReCtrl_Val_Id =  (int16)(((long)stInvCurrCtrl.stIn.dReCtrl_KPR1 * stInvCurrCtrl.stIn.ReCtrl_Val_Id>>10) +  ((long)(1024 - stInvCurrCtrl.stIn.dReCtrl_KPR1) * stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Cur]>>10));
+			//stDebug.ReadData.wDebug2=stInvCurrCtrl.stIn.ReCtrl_Val_Id;
+			UPDNLMT(stInvCurrCtrl.stIn.ReCtrl_Val_Id,200,-200);		       	     	        
+		}
+		else
+		{
+			stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] = stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos] >>1;
+			stInvCurrCtrl.stIn.ReCtrl_Val_Id = 0;
+		}
+		stInvCurrCtrl.stIn.ReCtrl_Val_Id =   (int16)((long)stInvCurrCtrl.stIn.dReCtrl_KPR2 * stInvCurrCtrl.stIn.ReCtrl_Val_Id >>10);
 		// stDebug.ReadData.wDebug3 = wCurr_dErrTmp;
 		// stDebug.ReadData.wDebug8= stInvCurrCtrl.stIn.ReCtrl_Val_Id ;
 		 //stDebug.ReadData.wDebug1= stInvCurrCtrl.stIn.ReCtrl_Id[stInvCurrCtrl.stIn.ReCtrl_Pos];
@@ -370,6 +366,10 @@ void InvCurrLoopCtrl(void)
 	//------------------Repeat control end----------
 
 		/////////////////////////////
+
+		stInvCurrCtrl.stOut.wOutCurr_d =	(((stInvCurrCtrl.stIn.dCurr_Kd*wCurr_dErrTmp)>>10)
+									        -((stInvCurrCtrl.stIn.dCurr_Kq*stInvPara.wCurr_q)>>10)
+									         + swCurr_dPI + stInvCurrCtrl.stIn.ReCtrl_Val_Id);
 		
 	/***********************************Inv Curr_q Control Loop**********************************************/
 		stInvCurrCtrl.stIn.wCurr_q = (stLoadLimit.wVoltReactiveCurrLimit+stPllPara.wIslandDisturb+stSysCfg.Rated_CapCurrPeak);
@@ -383,30 +383,30 @@ void InvCurrLoopCtrl(void)
 
 		UPDNLMT(swCurr_qPI,3200,-3200);			// 3200/32 = 100.0A
 
-		stInvCurrCtrl.stOut.wOutCurr_q =   (((stInvCurrCtrl.stIn.dCurr_Kd*wCurr_qErrTmp)>>10)
-									       +((stInvCurrCtrl.stIn.dCurr_Kq*stInvPara.wCurr_d)>>10)
-									       +swCurr_qPI);
-
-	//------------------Repeat control deal----------
+		//------------------Repeat control deal----------
 		if(stInvCurrCtrl.stIn.ReCtrl_Enable == 1)
 		{			        
-		        stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] = (long)stInvCurrCtrl.stIn.dReCtrl_KPR* (stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] + stInvCurrCtrl.stOut.wOutCurr_q)>>10;
-		        stInvCurrCtrl.stIn.ReCtrl_Val_Iq = (int16)(((long)stInvCurrCtrl.stIn.dReCtrl_KPR1 * stInvCurrCtrl.stIn.ReCtrl_Val_Iq)>>10 + ((long)(1024-stInvCurrCtrl.stIn.dReCtrl_KPR1)* stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Cur])>>10);
-		        UPDNLMT(stInvCurrCtrl.stIn.ReCtrl_Val_Iq,200,-200);		        
+			stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] = (long)stInvCurrCtrl.stIn.dReCtrl_KPR* (stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] + stInvCurrCtrl.stOut.wOutCurr_q)>>10;
+			stInvCurrCtrl.stIn.ReCtrl_Val_Iq = (int16)(((long)stInvCurrCtrl.stIn.dReCtrl_KPR1 * stInvCurrCtrl.stIn.ReCtrl_Val_Iq)>>10 + ((long)(1024-stInvCurrCtrl.stIn.dReCtrl_KPR1)* stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Cur])>>10);
+			UPDNLMT(stInvCurrCtrl.stIn.ReCtrl_Val_Iq,200,-200);		        
 		}
 		else
 		{
-		        stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] = stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] >>1;
-		        stInvCurrCtrl.stIn.ReCtrl_Val_Iq = 0;
+			stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] = stInvCurrCtrl.stIn.ReCtrl_Iq[stInvCurrCtrl.stIn.ReCtrl_Pos] >>1;
+			stInvCurrCtrl.stIn.ReCtrl_Val_Iq = 0;
 		}
-		 stInvCurrCtrl.stIn.ReCtrl_Val_Iq  =  (int16)((long)stInvCurrCtrl.stIn.dReCtrl_KPR2 *  stInvCurrCtrl.stIn.ReCtrl_Val_Iq>>10);
+		stInvCurrCtrl.stIn.ReCtrl_Val_Iq  =  (int16)((long)stInvCurrCtrl.stIn.dReCtrl_KPR2 *  stInvCurrCtrl.stIn.ReCtrl_Val_Iq>>10);
 		 
-	   	 stInvCurrCtrl.stIn.ReCtrl_Cur++;
-	    if(stInvCurrCtrl.stIn.ReCtrl_Cur >= RECTRL_POINTS)
+	   	stInvCurrCtrl.stIn.ReCtrl_Cur++;
+	    if(stInvCurrCtrl.stIn.ReCtrl_Cur >= stAdcPool.uwSumCnt)
 	    {
 	        stInvCurrCtrl.stIn.ReCtrl_Cur = 0;
 	    }
-	//------------------Repeat control end----------
+		//------------------Repeat control end----------
+
+		stInvCurrCtrl.stOut.wOutCurr_q =   (((stInvCurrCtrl.stIn.dCurr_Kd*wCurr_qErrTmp)>>10)
+									       +((stInvCurrCtrl.stIn.dCurr_Kq*stInvPara.wCurr_d)>>10)
+									       + swCurr_qPI + stInvCurrCtrl.stIn.ReCtrl_Val_Iq);
 	}
 	else
 	{
