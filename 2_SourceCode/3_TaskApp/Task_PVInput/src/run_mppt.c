@@ -112,11 +112,11 @@ void MPPT(Uint16 uwPVIndex)
 		stMpptDisturb[uwPVIndex].unMpptBits.bit.Enable = DISABLE;
 	}
 	/***********************Over Power **************************************/
-	if(stACSample.dActivePower>stLoadLimit.dActPowerLimitOutput + AC500W)		// (CurrentPower > RatedPower+300w)
+	if(stACSample.dActivePower>stLoadLimit.dActPowerLimitOutput + AC500W)		// (CurrentPower > RatedPower+500w)
 	{
 		stMpptDisturb[uwPVIndex].unMpptBits.bit.OverPower = 2;
 	}
-	else if(stACSample.dActivePower>stLoadLimit.dActPowerLimitOutput + AC300W)		// (CurrentPower > RatedPower+300w)
+	else if(stACSample.dActivePower>stLoadLimit.dActPowerLimitOutput + AC200W)		// (CurrentPower > RatedPower)
 	{
 		stMpptDisturb[uwPVIndex].unMpptBits.bit.OverPower = 1;
 	}
@@ -255,16 +255,6 @@ static void TrackingMppt(ST_MPPT_DISTURB *pstMpptDisturb, ST_MPPT_PARA *pstMpptP
 					pstMpptDisturb->uwFastMpptFlag =1;
 					pstMpptDisturb->uwMpptTrackInitCnt = 0;
 				}
-
-				pstMpptDisturb->uwFastMpptOffCnt++;
-				if(pstMpptDisturb->uwFastMpptOffCnt > 500)//20ms*500=10s
-				{
-				    pstMpptDisturb->uwFastMpptOffCnt = 500;
-                    pstMpptDisturb->uwFastMpptCnt = 0;
-                    pstMpptDisturb->uwFastMpptFlag =1;
-                    pstMpptDisturb->uwMpptTrackInitCnt = 0;
-				}
-
  			}
 			else if(pstMpptDisturb->unMpptBits.bit.AntiOverPower != 3)
             {
@@ -587,7 +577,7 @@ static void DisturbObserveMppt(ST_MPPT_DISTURB *pstMpptDisturb, int16 wStepSize,
 		pstMpptDisturb->wMpptStepWattPer = 1000;
 
 	
-	wMpptVoltStepSizeTmp =  wStepSize;				
+	wMpptVoltStepSizeTmp =  wStepSize;
 	if(pstMpptDisturb->dStepDeltPvWatt < -dMpptPowerError)		// MPPT Power Decrease 
 	{
 		pstMpptDisturb->uwMpptWattIncreaCnt = 0;

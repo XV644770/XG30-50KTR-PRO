@@ -102,8 +102,8 @@ void CalcACVoltCurrRms(void)
 	stACSample.SoftDCI.wRN = (stAdcPool.RSoftDCI.dAddSum*1000/stAdcPool.uwSumCnt)>>5;				// 1mA
 	stACSample.SoftDCI.wSN = (stAdcPool.SSoftDCI.dAddSum*1000/stAdcPool.uwSumCnt)>>5;
 
-	stACSample.HardDCI.wRN = stAdcPool.RHardDCI.dAddSum / stAdcPool.uwMux4Ch2SumCnt;				// 1mA
-	stACSample.HardDCI.wSN = stAdcPool.SHardDCI.dAddSum /stAdcPool.uwMux4Ch2SumCnt;
+	// stACSample.HardDCI.wRN = stAdcPool.RHardDCI.dAddSum / stAdcPool.uwMux4Ch2SumCnt;				// 1mA
+	// stACSample.HardDCI.wSN = stAdcPool.SHardDCI.dAddSum /stAdcPool.uwMux4Ch2SumCnt;
 	/***********************Calculation of GFCI Sample***************************************/
 	stACSample.wGfciRms = uwCalcRms(stAdcPool.GFCI.dSquareAddSum,stAdcPool.uwMux4Ch0SumCnt)*4;	// 1mA
 	stACSample.wGfciAvg = (stAdcPool.GFCI.dAddSum/stAdcPool.uwSumCnt);
@@ -182,6 +182,17 @@ void CalcOutputPower(void)
 	if(cInverterStatus == eInverterStatus)
 	{
 		stACSample.dActivePower = ((stAdcPool.ActivePower.dAddSum/stAdcPool.uwSumCnt)*10)>>4;	// *10
+		if(ATE_ADJUST_NORMAL == stF107Data.uwAdjustMode)
+		{
+			if(stACSample.dActivePower < (stLoadLimit.dActivePower>>1))
+			{
+				stACSample.dActivePower = (((int32)stACSample.dActivePower*stF107Data.wActPower30AdjRatio)>>11);
+			}
+			else
+			{
+				stACSample.dActivePower = (((int32)stACSample.dActivePower*stF107Data.wActPower70AdjRatio)>>11);
+			}
+		}
 		stACSample.dApparentPower = ((int32)stACSample.PhaseVoltRms.wRN*stACSample.PhaseCurrRms.wRN
 									+(int32)stACSample.PhaseVoltRms.wSN*stACSample.PhaseCurrRms.wSN
 									+(int32)stACSample.PhaseVoltRms.wTN*stACSample.PhaseCurrRms.wTN)/100;
@@ -198,18 +209,21 @@ void CalcOutputPower(void)
 			sdActivePowerSum = 0;
 			sdApparentPowerSum = 0;
 
-			if(stACSample.dActivePowerAvg < (stLoadLimit.dActivePower>>1))
+			if(ATE_ADJUST_NORMAL != stF107Data.uwAdjustMode)
 			{
-			    stACSample.dActivePowerAvg = (((int32)stACSample.dActivePowerAvg*stF107Data.wActPower30AdjRatio)>>11);
-			}
-			else
-			{
-			    stACSample.dActivePowerAvg = (((int32)stACSample.dActivePowerAvg*stF107Data.wActPower70AdjRatio)>>11);
+				if(stACSample.dActivePowerAvg < (stLoadLimit.dActivePower>>1))
+				{
+					stACSample.dActivePowerAvg = (((int32)stACSample.dActivePowerAvg*stF107Data.wActPower30AdjRatio)>>11);
+				}
+				else
+				{
+					stACSample.dActivePowerAvg = (((int32)stACSample.dActivePowerAvg*stF107Data.wActPower70AdjRatio)>>11);
+				}
 			}
 			if(stACSample.dActivePowerAvg > stACSample.dApparentPowerAvg)	// P>S; S=P
 			{
 				stACSample.dReactivePower = 0;
-				stACSample.dActivePowerAvg = stACSample.dApparentPowerAvg;
+				stACSample.dApparentPowerAvg = stACSample.dActivePowerAvg;
 				stACSample.wPowerFactor = 1000;			// PF = 1
 			}
 			else
