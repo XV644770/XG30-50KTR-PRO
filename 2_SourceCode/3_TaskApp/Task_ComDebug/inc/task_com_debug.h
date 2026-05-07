@@ -43,7 +43,9 @@ typedef union
     	Uint16 InvPwmLoop			:1;	// bit2
     	Uint16 BoostPwmLoop			:1;	// bit3
     	Uint16 PWMMode				:1;	// bit4
-    	Uint16 rsv					:11;
+		Uint16 OpenLoopEnable		:1;	// bit5
+		Uint16 OpenLoopUnlock		:1;	// bit6 开环解锁使能
+	    Uint16 rsv					:9;
     }bit;
 }UN_SET_REG;
 

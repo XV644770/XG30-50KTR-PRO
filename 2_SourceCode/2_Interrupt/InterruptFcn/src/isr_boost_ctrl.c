@@ -476,23 +476,22 @@ void InvBTCurrLoopCtrl(Uint16 uwPVId)
 	IncrementalPID(&stBTCurrCtrl[uwPVId]);
 }
 
-#if PWM_OPEN_LOOP_ENABLE
 #pragma CODE_SECTION(BoostPwmOpenLoop,"ramfuncs");
 void BoostPwmOpenLoop(void)
 {
-	EPwm8Regs.CMPA.bit.CMPA = 1042;//stDebug.SetData.uwBtOpenLoopDuty;
+	EPwm8Regs.CMPA.bit.CMPA = 1563;//stDebug.SetData.uwBtOpenLoopDuty;
 	EPwm8Regs.AQCSFRC.all = 0x00;
 
-	EPwm9Regs.CMPA.bit.CMPA = 1042;//stDebug.SetData.uwBtOpenLoopDuty;
+	EPwm9Regs.CMPA.bit.CMPA = 1563;//stDebug.SetData.uwBtOpenLoopDuty;
 	EPwm9Regs.AQCSFRC.all = 0x00;
 
-	EPwm10Regs.CMPA.bit.CMPA = 1042;//stDebug.SetData.uwBtOpenLoopDuty;
+	EPwm10Regs.CMPA.bit.CMPA = 1563;//stDebug.SetData.uwBtOpenLoopDuty;
 	EPwm10Regs.AQCSFRC.all = 0x00;
 
-	EPwm11Regs.CMPA.bit.CMPA = 1042;//stDebug.SetData.uwBtOpenLoopDuty;
+	EPwm11Regs.CMPA.bit.CMPA = 1563;//stDebug.SetData.uwBtOpenLoopDuty;
 	EPwm11Regs.AQCSFRC.all = 0x00;
 }
-#else
+
 #pragma CODE_SECTION(BoostPwmOnff,"ramfuncs");
 void BoostPwmOnff(void)
 {
@@ -657,7 +656,6 @@ void BoostPwmOnff(void)
 		EPwm11Regs.AQCSFRC.all = 0x09;
 	}
 }
-#endif
 
 
 //end of file

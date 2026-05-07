@@ -57,7 +57,7 @@ void InitECap(void)
 	ECap3Regs.ECCTL2.bit.SYNCO_SEL = 0x0;
 	ECap3Regs.CAP1 = 6250;            			// Set Period value = 120MHz/6250 = 19.2KHz
 //	ECap3Regs.CAP2 = 4250;            			// Set Compare value = 3750/6250 = 60%
-	ECap3Regs.CAP2 = 750;            			// Set Compare value = 3750/6250 =70% 	XG40K
+	ECap3Regs.CAP2 = 3750;            			// Set Compare value = 3750/6250 =70% 	XG40K
 	ECap3Regs.CTRPHS = 0x0;
 	ECap3Regs.ECCTL2.bit.TSCTRSTOP = 1;      	// Start ECAP PWM
 

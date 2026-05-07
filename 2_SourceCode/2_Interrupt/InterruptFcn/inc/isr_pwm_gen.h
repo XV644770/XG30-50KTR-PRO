@@ -118,6 +118,7 @@ extern ST_INV_PWM	stInvPwm;
 
 extern void InvPwmOnOff(void);
 extern void InvOutVoltCalc(void);
+extern void InvOutVoltCalcOpenLoop(void);
 extern void PwmGenParaInit();
 
 #endif

@@ -46,23 +46,29 @@ void PVInputTask(void)
 
 			PVPanelReserveCheck();
 			PVPanelShortCheck();
-			PVISOCheck();
+			if(DISABLE == stDebug.SetData.unSetReg.bit.OpenLoopUnlock)
+			{
+				PVISOCheck();
+			}
 			BusVoltSampleCheck();
 			BTCurrSampleCheck();
 			/****Warning Check*********/
-			InverterSPDCheck();
-			InverterNPECheck();
+			if(DISABLE == stDebug.SetData.unSetReg.bit.OpenLoopUnlock)
+			{
+				InverterSPDCheck();
+				InverterNPECheck();
 
-			if(INDEPENDENT == stSysCfg.eMpptMode)
-			{
-				for(uwPVIndexTmp=0; uwPVIndexTmp<stSysCfg.uwPVNumber; uwPVIndexTmp++)
+				if(INDEPENDENT == stSysCfg.eMpptMode)
 				{
-					MPPT(uwPVIndexTmp);
+					for(uwPVIndexTmp=0; uwPVIndexTmp<stSysCfg.uwPVNumber; uwPVIndexTmp++)
+					{
+						MPPT(uwPVIndexTmp);
+					}
 				}
-			}
-			else if(PARALLEL == stSysCfg.eMpptMode)
-			{
-				MPPT(stMpptTskCtrl.uwPVVoltMaxID);
+				else if(PARALLEL == stSysCfg.eMpptMode)
+				{
+					MPPT(stMpptTskCtrl.uwPVVoltMaxID);
+				}
 			}
 		}
 

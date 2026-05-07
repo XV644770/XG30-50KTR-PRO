@@ -64,11 +64,8 @@ extern void InvPVVoltLoopCtrl(Uint16 uwPVId);
 extern void InvBTCurrLoopCtrl(Uint16 uwPVId);
 extern void InvActivePowerLoopCtrl(void);
 
-#if PWM_OPEN_LOOP_ENABLE
 extern void BoostPwmOpenLoop(void);
-#else
 extern void BoostPwmOnff(void);
-#endif
 
 #endif
 //===========================================================================
