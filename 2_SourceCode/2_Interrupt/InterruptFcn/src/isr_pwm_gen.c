@@ -153,9 +153,8 @@ void InvPwmOnOff(void)
  * INPUT:
  * CALLED BY: EPWM2_prd_isr()
  *============================================================================*/
-#pragma CODE_SECTION(InvOutVoltCalc,"ramfuncs");
-#if PWM_OPEN_LOOP_ENABLE
-void InvOutVoltCalc(void)
+#pragma CODE_SECTION(InvOutVoltCalcOpenLoop,"ramfuncs");
+void InvOutVoltCalcOpenLoop(void)
 {
 	int16 wBusVoltPositionTmp;
 	int16 wBusVoltInverseIndexTmp;
@@ -226,7 +225,8 @@ void InvOutVoltCalc(void)
 	EPwm6Regs.AQCSFRC.all = 0;
 	EPwm7Regs.AQCSFRC.all = 0;
 }
-#else
+
+#pragma CODE_SECTION(InvOutVoltCalc,"ramfuncs");
 void InvOutVoltCalc(void)
 {
 	int16 wBusVoltPositionTmp;
@@ -364,7 +364,6 @@ void InvOutVoltCalc(void)
 		memset((void*)&stPwmPara,0,sizeof(stPwmPara));
 	}
 }
-#endif
 /****************************************************************************************
 *Functions PWN Duty Claculate
 *

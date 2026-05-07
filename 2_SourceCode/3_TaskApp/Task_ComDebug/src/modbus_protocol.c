@@ -175,6 +175,8 @@ Uint16 uwReadHoldingReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwTxBuf)
 			case 0x3069:	uwTransmitData =stMachineCfg.wInvTempOver;					break;
 			case 0x306A:	uwTransmitData =stMachineCfg.wAmbTempOver;					break;
 			case 0x306B:	uwTransmitData =stMachineCfg.wBoostTempOver;				break;
+			case 0x306C:	uwTransmitData = stDebug.SetData.unSetReg.bit.OpenLoopUnlock;		break;
+			case 0x306D:	uwTransmitData = stDebug.SetData.unSetReg.bit.OpenLoopEnable;		break;
 
 			/*****************Read --- Parameters Inputing Register****************************/
 			case 0x3800:		uwTransmitData = SOFTWARE_FORMAL*100+SOFTWARE_TEST;		break;
@@ -280,10 +282,10 @@ Uint16 uwReadHoldingReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwTxBuf)
 			case 0x385F:		uwTransmitData = 111;			break;
 			case 0x3860:		uwTransmitData = stPllPara.stOut.uwPllOk;			break;
 
-			case 0x3861:		uwTransmitData = stDebug.ReadData.wDebug5[1];			break;
-			case 0x3862:		uwTransmitData = stDebug.ReadData.wDebug5[2];			break;
-			case 0x3863:		uwTransmitData = stMpptDisturb[PVA].eTrackStatus;			break;
-			case 0x3864:		uwTransmitData = stMpptDisturb[PVB].eTrackStatus;			break;
+			case 0x3861:		uwTransmitData = EPwm1Regs.CMPA.bit.CMPA;			break;
+			case 0x3862:		uwTransmitData = EPwm1Regs.AQCSFRC.all;			break;
+			case 0x3863:		uwTransmitData = EPwm8Regs.CMPA.bit.CMPA;			break;
+			case 0x3864:		uwTransmitData = EPwm8Regs.AQCSFRC.all;			break;
 			case 0x3865:		uwTransmitData = stAfciPara1.uwCurrCH1;		break;
 			case 0x3866:		uwTransmitData = stAfciPara1.uwCurrCH2;			break;
 			case 0x3867:		uwTransmitData = stAfciPara1.uwCurrCH3;		break;
@@ -682,6 +684,28 @@ Uint16 uwSetMultipleReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwRxBuf)
 			case 0x3069:	stMachineCfg.wInvTempOver= uwSetValueTmp;	break;
 			case 0x306A:	stMachineCfg.wAmbTempOver= uwSetValueTmp;	break;
 			case 0x306B:	stMachineCfg.wBoostTempOver= uwSetValueTmp;	break;
+			case 0x306C:
+				if((0xAA55 == uwSetValueTmp) && (cInverterStatus != eInverterStatus))
+				{
+					stDebug.SetData.unSetReg.bit.OpenLoopUnlock = ENABLE;
+				}
+				else
+				{
+					stDebug.SetData.unSetReg.bit.OpenLoopUnlock = DISABLE;
+					stDebug.SetData.unSetReg.bit.OpenLoopEnable = DISABLE;
+				}
+			break;
+			case 0x306D:
+				if((ENABLE == stDebug.SetData.unSetReg.bit.OpenLoopUnlock) && (ENABLE == uwSetValueTmp))
+				{
+					stDebug.SetData.unSetReg.bit.OpenLoopEnable = uwSetValueTmp;
+				}
+				else
+				{
+					stDebug.SetData.unSetReg.bit.OpenLoopUnlock = DISABLE;
+					stDebug.SetData.unSetReg.bit.OpenLoopEnable = DISABLE;
+				}
+			break;
 
 			default:
 			{

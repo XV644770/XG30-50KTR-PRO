@@ -258,12 +258,15 @@ void ACOutputTask(void)
 	 		}
 			GridVoltProtection();
 			GridFreqProtection();
-			TemperatureProtection();
-			GFCISelfCheck();
-			GFCIOverCurrCheck();
-			DCIAdjust();
-			DCIProtection();
-			OPTask_AutoTest();
+			if(DISABLE == stDebug.SetData.unSetReg.bit.OpenLoopUnlock)
+			{
+				TemperatureProtection();
+				GFCISelfCheck();
+				GFCIOverCurrCheck();
+				DCIAdjust();
+				DCIProtection();
+				OPTask_AutoTest();
+			}
 		}
 
 		if(event&(1<<ACOUTPUT_TASK_PERIOD))		// task period 20ms

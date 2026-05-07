@@ -60,10 +60,11 @@ void PhaseLockLoop(ST_PLL_PARA *pstPllPara)
 				 + pstPllPara->stPID.stOut.dPIDOut);
 	pstPllPara->stOut.dTheta = (int32)(ldGridThetaCalcVarTmp>>14);
 	pstPllPara->stPID.stOut.dPIDOut = (int32)(ldGridThetaCalcVarTmp&0x3FFF);
-#if PWM_OPEN_LOOP_ENABLE
-	pstPllPara->stOut.dTheta = 274517;		// F:50Hz   dTheta = 2*pi*F/19200 * 2^24 = 274517
-	stPhaseSequence.stOut.uwPhaseSequenceFlag = PHASE_SEQ_POSITIVE;
-#endif
+	if(stDebug.SetData.unSetReg.bit.OpenLoopEnable)
+	{
+		pstPllPara->stOut.dTheta = 274517;		// F:50Hz   dTheta = 2*pi*F/19200 * 2^24 = 274517
+		stPhaseSequence.stOut.uwPhaseSequenceFlag = PHASE_SEQ_POSITIVE;
+	}
 	UPDNLMT16(pstPllPara->stOut.dTheta, pstPllPara->stPID.stIn.dPIMax, pstPllPara->stPID.stIn.dPIMin);
 
 	// dTheta = 2*pi*F/19200 * 2^24  => 19200/F = 2^24*2*pi/dTheta

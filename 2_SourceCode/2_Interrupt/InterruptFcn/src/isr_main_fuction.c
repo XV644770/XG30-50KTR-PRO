@@ -171,42 +171,71 @@ interrupt void SCIDReceiveInterrupt(void)
 //*************************************************************
 interrupt void  EPWM1_zero_isr(void)//23.4us
 {
-	SoftOverProtect();
+	if(DISABLE == stDebug.SetData.unSetReg.bit.OpenLoopUnlock)
+	{
+		SoftOverProtect();
 
-	SaveAdcBufZeroSample();			// Adc convertion 2.9us, funttion 1.6us
-	
-	GridVoltPhaseSequenceCheck();		// 1.5us
-	
-	CalcAdcOffset();
-	
-	InvVoltLoopCtrl();					// 2.3us
-	
-	
-	InvBusVoltLoopCtrl();					// 2.7us
-	
-	
-	InvCurrLoopCtrl();					// 1.7us		
-	
-	
-	InvOutVoltCalc();					// 7us
-	
-#if PWM_OPEN_LOOP_ENABLE
-	//Open loop program does not need to do any processing
-#else
-	
-	InvPwmOnOff();						//  1us
-	
-#endif
+		SaveAdcBufZeroSample();			// Adc convertion 2.9us, funttion 1.6us
+		
+		GridVoltPhaseSequenceCheck();		// 1.5us
+		
+		CalcAdcOffset();
+		
+		InvVoltLoopCtrl();					// 2.3us
+		
+		InvBusVoltLoopCtrl();					// 2.7us
+		
+		InvCurrLoopCtrl();					// 1.7us		
+	}
+
+	if(stDebug.SetData.unSetReg.bit.OpenLoopEnable)
+	{
+		// InvOutVoltCalcOpenLoop();			// 7us Open Loop
+
+		EALLOW;
+		EPwm1Regs.TZSEL.all = 0x0000;
+		EPwm2Regs.TZSEL.all = 0x0000;
+		EPwm3Regs.TZSEL.all = 0x0000;
+		EPwm4Regs.TZSEL.all = 0x0000;
+		EPwm5Regs.TZSEL.all = 0x0000;
+		EPwm6Regs.TZSEL.all = 0x0000;
+		EPwm7Regs.TZSEL.all = 0x0000;
+
+		EPwm1Regs.TZCLR.bit.OST = 1;
+		EPwm2Regs.TZCLR.bit.OST = 1;
+		EPwm3Regs.TZCLR.bit.OST = 1;
+		EPwm4Regs.TZCLR.bit.OST = 1;
+		EPwm5Regs.TZCLR.bit.OST = 1;
+		EPwm6Regs.TZCLR.bit.OST = 1;
+		EPwm7Regs.TZCLR.bit.OST = 1;
+		EDIS;
 
 
+		EPwm1Regs.CMPA.bit.CMPA = 1563;
+		EPwm1Regs.AQCSFRC.all = 0x00;
+		EPwm2Regs.CMPA.bit.CMPA = 1563;
+		EPwm2Regs.AQCSFRC.all = 0x00;
+		EPwm3Regs.CMPA.bit.CMPA = 1563;
+		EPwm3Regs.AQCSFRC.all = 0x00;
+		EPwm4Regs.CMPA.bit.CMPA = 1563;
+		EPwm4Regs.AQCSFRC.all = 0x00;
+		EPwm6Regs.CMPA.bit.CMPA = 1563;
+		EPwm6Regs.AQCSFRC.all = 0x00;
+		EPwm7Regs.CMPA.bit.CMPA = 1563;
+		EPwm7Regs.AQCSFRC.all = 0x00;
+	}
+	else
+	{
+		InvOutVoltCalc();					// 7us
+		InvPwmOnOff();						//  1us
 
-	
-	EPwm1Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwRPWMDutyP;
-	EPwm2Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwRPWMDutyN;
-	EPwm3Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwSPWMDutyP;
-	EPwm4Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwSPWMDutyN;
-	EPwm6Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwTPWMDutyP;
-	EPwm7Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwTPWMDutyN;
+		EPwm1Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwRPWMDutyP;
+		EPwm2Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwRPWMDutyN;
+		EPwm3Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwSPWMDutyP;
+		EPwm4Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwSPWMDutyN;
+		EPwm6Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwTPWMDutyP;
+		EPwm7Regs.CMPA.bit.CMPA = stPwmCalc.stOut.uwTPWMDutyN;
+	}
 	
 	EPwm1Regs.ETCLR.bit.INT = 1;
 	PieCtrlRegs.PIEACK.all 	= PIEACK_GROUP3;
@@ -238,11 +267,28 @@ interrupt void EPWM2_prd_isr(void)//24.7us
 		InvActivePowerLoopCtrl();
 	}
 	
-#if PWM_OPEN_LOOP_ENABLE
-	BoostPwmOpenLoop();
-#else
-	BoostPwmOnff();		// 1us
-#endif
+	if(stDebug.SetData.unSetReg.bit.OpenLoopEnable)
+	{
+		EALLOW;
+		EPwm8Regs.TZSEL.all = 0x0000;
+		EPwm9Regs.TZSEL.all = 0x0000;
+		EPwm10Regs.TZSEL.all = 0x0000;
+		EPwm11Regs.TZSEL.all = 0x0000;
+		EPwm12Regs.TZSEL.all = 0x0000;
+
+		EPwm8Regs.TZCLR.bit.OST = 1;
+		EPwm9Regs.TZCLR.bit.OST = 1;
+		EPwm10Regs.TZCLR.bit.OST = 1;
+		EPwm11Regs.TZCLR.bit.OST = 1;
+		EPwm12Regs.TZCLR.bit.OST = 1;
+		EDIS;
+		
+		BoostPwmOpenLoop();
+	}
+	else
+	{
+		BoostPwmOnff();		// 1us
+	}
 
 	if(0==suwPeriodIsrDivFreq)
 	{
@@ -271,6 +317,29 @@ interrupt void EPWM2_prd_isr(void)//24.7us
 //****************************************************************************************
 interrupt void EPWM1_TZ_isr(void)
 {
+	if(ENABLE == stDebug.SetData.unSetReg.bit.OpenLoopUnlock)
+	{
+		EALLOW;
+		EPwm1Regs.TZSEL.all = 0x0000;
+		EPwm2Regs.TZSEL.all = 0x0000;
+		EPwm3Regs.TZSEL.all = 0x0000;
+		EPwm4Regs.TZSEL.all = 0x0000;
+		EPwm5Regs.TZSEL.all = 0x0000;
+		EPwm6Regs.TZSEL.all = 0x0000;
+		EPwm7Regs.TZSEL.all = 0x0000;
+		EPwm8Regs.TZSEL.all = 0x0000;
+		EPwm9Regs.TZSEL.all = 0x0000;
+		EPwm10Regs.TZSEL.all = 0x0000;
+		EPwm11Regs.TZSEL.all = 0x0000;
+		EPwm12Regs.TZSEL.all = 0x0000;
+		
+		EPwm1Regs.TZCLR.bit.INT = 1;
+		EPwm1Regs.TZEINT.bit.OST = 0;
+		EDIS;
+		PieCtrlRegs.PIEACK.all = PIEACK_GROUP2;
+		return;
+	}
+
 	stInvPwm.uwTzEnableDelayCnt = 10;
 	EPwm1Regs.AQCSFRC.all = 0x09;	// CSFB(10-High),CSFA(01-Low)
 	EPwm2Regs.AQCSFRC.all = 0x09;	// CSFB(10-High),CSFA(01-Low)

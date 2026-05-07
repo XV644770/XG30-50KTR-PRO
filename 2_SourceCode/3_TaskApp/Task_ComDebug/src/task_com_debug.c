@@ -623,6 +623,8 @@ void InitDebugData(void)
 	stDebug.SetData.unSetReg.bit.InvPwmLoop = OFF;
 	stDebug.SetData.unSetReg.bit.BoostPwmLoop = OFF;
 	stDebug.SetData.unSetReg.bit.PWMMode = 0;
+	stDebug.SetData.unSetReg.bit.OpenLoopUnlock = DISABLE;
+	stDebug.SetData.unSetReg.bit.OpenLoopEnable = DISABLE;
 	
 	stDebug.SetData.uwActivePercent = 10;
 	stDebug.SetData.wReacitvePercent = 0;
