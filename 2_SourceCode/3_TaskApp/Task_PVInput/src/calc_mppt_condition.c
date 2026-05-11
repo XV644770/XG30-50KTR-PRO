@@ -153,7 +153,12 @@ void CalcPVVoltMax(void)
 			}	
 			else if((cInverterStatus==eInverterStatus) && (stMpptPara[uwPVIndexTmp].wPVOpenVolt < stMpptPara[uwPVIndexTmp].wPVVolt))
 			{
-				stMpptPara[uwPVIndexTmp].wPVOpenVolt = stMpptPara[uwPVIndexTmp].wPVVolt;	// update Open Voltage
+				stMpptPara[uwPVIndexTmp].wPVOpenVolt = stMpptPara[uwPVIndexTmp].wPVVolt;	// update Open Voltage →
+			}
+			else if((cInverterStatus==eInverterStatus) 
+				 && ((stMpptPara[uwPVIndexTmp].wPVOpenVolt > stMpptPara[uwPVIndexTmp].wPVVolt) && stDCSample.wBTCurr[uwPVIndexTmp] < 5))
+			{
+				stMpptPara[uwPVIndexTmp].wPVOpenVolt = stMpptPara[uwPVIndexTmp].wPVVolt;	// update Open Voltage ←
 			}
 			// Calculate the power of each PV 		P = V*I
 			stMpptPara[uwPVIndexTmp].dMpptPower = ((int32)stMpptPara[uwPVIndexTmp].wPVVolt*stDCSample.wMPPTCurr[uwPVIndexTmp]/10);	//unit 0.01w
@@ -238,7 +243,18 @@ void BusRefCalc(ENUM_MPPT_MODE  eMpptMode_s)
 		{
 			wBoostOnVoltTmp = INDEPENDENT_BOOST_ON_VOLT;
 			uwPVVoltMaxIDTmp = stMpptTskCtrl.uwPVVoltRefMaxID;
-			wBoostOnPVJudgeVoltTmp = (stMpptDisturb[uwPVVoltMaxIDTmp].wPVVoltRef);
+			if(stMpptDisturb[uwPVVoltMaxIDTmp].wPVVoltRef <= (INDEPENDENT_BOOST_ON_VOLT-VDC30V))	// <= 840V
+			{
+				wBoostOnPVJudgeVoltTmp = (stMpptDisturb[uwPVVoltMaxIDTmp].wPVVoltRef + VDC30V);		// <= 870V
+			}
+			else if(stMpptDisturb[uwPVVoltMaxIDTmp].wPVVoltRef <= INDEPENDENT_BOOST_ON_VOLT)		// 840V~870V
+			{
+				wBoostOnPVJudgeVoltTmp = INDEPENDENT_BOOST_ON_VOLT;									// 870V
+			}
+			else	// > 870V
+			{
+				wBoostOnPVJudgeVoltTmp = stMpptDisturb[uwPVVoltMaxIDTmp].wPVVoltRef;
+			}
 		}
 		if((wBoostOnPVJudgeVoltTmp < stMpptTskCtrl.wBusStandardVolt) || (wBoostOnPVJudgeVoltTmp < wBoostOnVoltTmp))
 		{

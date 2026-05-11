@@ -52,6 +52,13 @@ typedef enum
 	Runing
 } ENUM_TRACK_STATUS;
 
+typedef enum
+{
+	ANTIFLOW_DownLoading = 0,	// 降载
+	ANTIFLOW_Stop = 1,			// 停止
+	ANTIFLOW_Loading = 2,		// 加载
+	ANTIFLOW_NormalMppt = 3		// 退出
+} ENUM_ANTIFLOW_MODE;
 
 typedef union
 {

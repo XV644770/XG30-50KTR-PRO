@@ -162,7 +162,8 @@ void InvPVVoltLoopCtrl(Uint16 uwPVId)
     static Uint16 suwAcPowerLimitavgCnt;
 	int32  dActivePowerIsrTmp;
 	Uint16 suwPVIndex=0;
-	if((cInverterStatus == eInverterStatus)&&(TRUE == stBTCtrl[uwPVId].uwBtPwmEnable))
+	if((cInverterStatus == eInverterStatus)&&(TRUE == stBTCtrl[uwPVId].uwBtPwmEnable)
+	&&  (Runing == stMpptDisturb[uwPVId].eTrackStatus))
 	{
 		stPVVoltCtrl[uwPVId].stIn.uwCtrlLoopEnable	= NEGATIVE_PID;
 		/***********************Over Power BT Current Reference Limit**************************************/
@@ -179,8 +180,8 @@ void InvPVVoltLoopCtrl(Uint16 uwPVId)
 			else
 			{
 				stMpptDisturb[uwPVId].wMpptVoltRef += 5;
-				 UPDNLMT(stMpptDisturb[uwPVId].wMpptVoltRef, MPPT_VOLT_MAX ,MPPT_VOLT_MIN);
-				 stMpptDisturb[uwPVId].wPVVoltRef = stMpptDisturb[uwPVId].wMpptVoltRef;
+				UPDNLMT(stMpptDisturb[uwPVId].wMpptVoltRef, stMpptPara->wPVOpenVolt + VDC5V ,MPPT_VOLT_MIN);
+				stMpptDisturb[uwPVId].wPVVoltRef = stMpptDisturb[uwPVId].wMpptVoltRef;
 			}
 			 
 		}
@@ -197,13 +198,13 @@ void InvPVVoltLoopCtrl(Uint16 uwPVId)
         {
             suwAcPowerLimitavgCnt = 20;
         }
-		if(suwAcPowerLimitCnt[uwPVId] >= suwAcPowerLimitavgCnt)
+		if(suwAcPowerLimitCnt[uwPVId] >= (suwAcPowerLimitavgCnt>>1))
 		{
 			suwAcPowerLimitCnt[uwPVId] = 0;
 			dActivePowerIsrTmp = sdAcPowerSum5ms[uwPVId] / suwAcPowerLimitavgCnt;
 			sdAcPowerSum5ms[uwPVId] = 0;
 			
-			if(dActivePowerIsrTmp>stLoadLimit.dActPowerOutputRef + ACT500W)	
+			if(dActivePowerIsrTmp>stLoadLimit.dActPowerOutputRef + ACT300W)	
 			{	
 				if(dActivePowerIsrTmp>stLoadLimit.dActPowerOutputRef + ACT3000W)	
 				{
@@ -216,12 +217,16 @@ void InvPVVoltLoopCtrl(Uint16 uwPVId)
 						suwPowerLimitBTCurrRef[uwPVId] = 0;
 					}
 				}
-				else if(((stLoadLimit.uwDeratingMode == SETTING_DERATING)||(stLoadLimit.uwDeratingMode == MULTI_ANTI_FLOW_DERATING))
-						&&(dActivePowerIsrTmp>stLoadLimit.dActPowerOutputRef + ACT1000W))
+				else if(((stLoadLimit.uwDeratingMode == SETTING_DERATING)
+					   ||(stLoadLimit.uwDeratingMode == MULTI_ANTI_FLOW_DERATING)
+					   ||(stLoadLimit.uwDeratingMode == ANTI_FLOW_DERATING)))
 				{
-				 	stMpptDisturb[uwPVId].wMpptVoltRef += 2;
-					 UPDNLMT(stMpptDisturb[uwPVId].wMpptVoltRef, MPPT_VOLT_MAX ,MPPT_VOLT_MIN);
-				 	stMpptDisturb[uwPVId].wPVVoltRef = stMpptDisturb[uwPVId].wMpptVoltRef;
+					if(stPVVoltCtrl[uwPVId].stIn.dRef < (stAdcPool.PVVolt[uwPVId].wArithVal - VDC5V)  &&  (stPVVoltCtrl[uwPVId].stIn.dRef > MPPT_VOLT_MIN + VDC20V))
+					{
+						stMpptDisturb[uwPVId].wMpptVoltRef = stAdcPool.PVVolt[uwPVId].wArithVal - VDC5V;						
+					}
+					stMpptDisturb[uwPVId].wMpptVoltRef += 2;
+					UPDNLMT(stMpptDisturb[uwPVId].wMpptVoltRef, MPPT_VOLT_MAX ,MPPT_VOLT_MIN);
 				}
 				else if(stLoadLimit.uwDeratingMode != SETTING_DERATING)
 				{
@@ -232,11 +237,13 @@ void InvPVVoltLoopCtrl(Uint16 uwPVId)
 //					}
 				    stMpptDisturb[uwPVId].wMpptVoltRef += 1;
 					UPDNLMT(stMpptDisturb[uwPVId].wMpptVoltRef, MPPT_VOLT_MAX ,MPPT_VOLT_MIN);
-				 	stMpptDisturb[uwPVId].wPVVoltRef = stMpptDisturb[uwPVId].wMpptVoltRef;
 				}
+				stMpptDisturb[uwPVId].wPVVoltRef = stMpptDisturb[uwPVId].wMpptVoltRef;
 			}
 
-			if(stACSample.dActivePower<stLoadLimit.dActPowerLimitOutput-200)		// (CurrentPower < RatedPower)
+			if((stACSample.dActivePower<stLoadLimit.dActPowerLimitOutput-200)
+			|| (((stLoadLimit.uwDeratingMode == MULTI_ANTI_FLOW_DERATING) || (stLoadLimit.uwDeratingMode == ANTI_FLOW_DERATING))
+				&& (ANTIFLOW_DownLoading != stMpptDisturb[uwPVId].unMpptBits.bit.AntiOverPower)))		// (CurrentPower < RatedPower)
 			{
 				suwPowerLimitBTCurrRef[uwPVId]++;										// 1.04ms*4 + (1/32)A
 				if(suwPowerLimitBTCurrRef[uwPVId] > (stSysCfg.wBTCurrLimitMax[uwPVId]+32))
@@ -291,9 +298,10 @@ void InvPVVoltLoopCtrl(Uint16 uwPVId)
 
 		// boost current refine limit
 		stPVVoltCtrl[uwPVId].stIn.dRef = stMpptDisturb[uwPVId].wPVVoltRef;
-		if(stPVVoltCtrl[uwPVId].stIn.dRef < (stAdcPool.PVVolt[uwPVId].wArithVal - 200)  &&  (stPVVoltCtrl[uwPVId].stIn.dRef > MPPT_VOLT_MIN + VDC20V))
+		if(stPVVoltCtrl[uwPVId].stIn.dRef < (stAdcPool.PVVolt[uwPVId].wArithVal - VDC10V)  &&  (stPVVoltCtrl[uwPVId].stIn.dRef > MPPT_VOLT_MIN + VDC20V))
 		{
-			stPVVoltCtrl[uwPVId].stIn.dRef = stAdcPool.PVVolt[uwPVId].wArithVal - 200;
+			stPVVoltCtrl[uwPVId].stIn.dRef = stAdcPool.PVVolt[uwPVId].wArithVal - VDC10V;
+			stMpptDisturb[uwPVId].wMpptVoltRef = stPVVoltCtrl[uwPVId].stIn.dRef;
 		}
 
 		stPVVoltCtrl[uwPVId].stIn.dReal = stAdcPool.PVVolt[uwPVId].wArithVal;

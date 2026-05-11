@@ -762,7 +762,7 @@ static void ACVoltHighDerating(void)
 // Single Machine AntiFlow Derating
 static void AntiFlowDerating(void)
 {
-    static Uint16 suwAntiFlowLimitCnt=0,suwAntiFlowRecorveCnt=0;
+    static Uint16 	suwAntiFlowLimitCnt=0,suwAntiFlowRecorveCnt=0;
     int32	dAntiFlowMeterPowerTmp;
 
 	if((ENABLE == stDspReceData.unFuncEnable.bit.ExportLimit)&&(cInverterStatus == eInverterStatus))
@@ -818,15 +818,7 @@ static void AntiFlowDerating(void)
 		stLoadLimit.dActPowerAntiFlowLimit = stLoadLimit.dActivePower;
 	}
 
-    if(stLoadLimit.dActPowerAntiFlowLimit > stLoadLimit.dActivePower)
-   	{
-    	stLoadLimit.dActPowerAntiFlowLimit = stLoadLimit.dActivePower;
-   	}
-
-    if(stLoadLimit.dActPowerAntiFlowLimit < 200)
-	{
-		stLoadLimit.dActPowerAntiFlowLimit = 200;		// 20w
-	}
+	UPDNLMT(stLoadLimit.dActPowerAntiFlowLimit, stLoadLimit.dActivePower, AC300W);
 }
 
 // Multi-Machine AntiFlow Derating
@@ -851,15 +843,7 @@ static void MultiAntiFlowDerating(void)
     	stLoadLimit.dActPowerMultiAntiFlowLimit = stLoadLimit.dActivePower;
     }
 
-    if(stLoadLimit.dActPowerMultiAntiFlowLimit > stLoadLimit.dActivePower)
-    {
-    	stLoadLimit.dActPowerMultiAntiFlowLimit = stLoadLimit.dActivePower;
-    }
-
-    if(stLoadLimit.dActPowerMultiAntiFlowLimit < 200)
-    {
-    	stLoadLimit.dActPowerMultiAntiFlowLimit = 200;       // 20w
-    }
+	UPDNLMT(stLoadLimit.dActPowerMultiAntiFlowLimit, stLoadLimit.dActivePower, AC300W);
 }
 
 // communicate Set Power
@@ -1140,7 +1124,8 @@ static void LimitOutputActivePower(void)
 		udActPowerLimitTmp = stLoadLimit.dActPowerReactiveLimit;
 	}
 
-	if(udActPowerLimitTmp > stLoadLimit.dActPowerLoadSpeedLimit)
+	if(udActPowerLimitTmp > stLoadLimit.dActPowerLoadSpeedLimit
+	&& ((DISABLE == stDspReceData.unFuncEnable.bit.ExportLimit) && (DISABLE == stDspReceData.unFuncEnable.bit.MultiExportLimit)))
 	{
 		uwDeratingModeTmp = LOADSPEED_DERATING;
 		udActPowerLimitTmp = stLoadLimit.dActPowerLoadSpeedLimit;
@@ -1176,16 +1161,6 @@ static void LimitOutputActivePower(void)
 	}
 
 	stLoadLimit.uwDeratingMode = uwDeratingModeTmp;
-    
-	// MultiExport Antiflow Power Derating -- 20220322Revised
-	if((ANTI_FLOW_DERATING == stLoadLimit.uwDeratingMode)||(MULTI_ANTI_FLOW_DERATING == stLoadLimit.uwDeratingMode))
-	{
-		udActPowerMinLimitTmp = 200;        // 20w
-	}
-	else
-	{
-		udActPowerMinLimitTmp = 2000;        // 200w
-	}
 
     if(udActPowerLimitTmp>=udActPowerMinLimitTmp)		// 200w
 	{

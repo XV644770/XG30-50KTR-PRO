@@ -30,71 +30,138 @@ void MpptInit(void)
 
 void MPPTStrategy(Uint16 uwPVIndex)
 {
-    Uint16 uwAntiRate = 0;
+	Uint16 uwPVIndexTmp = 0; 
+	Uint16 uwVoltStepTmp = 0;
     Uint32 udCtActivePowerAvg = 0;
 
-    if((REACTIVE_QV_MODE==stF107Data.uwPFCtrlMode)
-       &&(STRANDARD_TAIWAI == stDspReceData.unSafetyOdm.bit.SafetyStandard)
-       &&(MACHINE_ID_Plus_25_30KW == stSysCfg.uwMachineType))//use Anti Strategy
+    if((REACTIVE_QV_MODE==stF107Data.uwPFCtrlMode)&&(STRANDARD_TAIWAI == stDspReceData.unSafetyOdm.bit.SafetyStandard)&&(MACHINE_ID_Plus_25_30KW == stSysCfg.uwMachineType)
+		|| (ENABLE == stDspReceData.unFuncEnable.bit.ExportLimit || ENABLE == stDspReceData.unFuncEnable.bit.MultiExportLimit)
+		&& (stMpptDisturb[uwPVIndex].wMpptVoltRef >(int16) ((int32)stMpptPara[uwPVIndex].wPVOpenVolt * 880>>10))
+		&& (cInverterStatus == eInverterStatus))					//use Anti Strategy
     {
-        stMpptDisturb[uwPVIndex].uwAntiFlowCnt++;
-        udCtActivePowerAvg = labs(stLoadLimit.dActPowerLimitOutput - stACSample.dActivePowerAvg);
-        if(stMpptPara[uwPVIndex].wPVOpenVolt < VDC600V)
+		/************* AntiFlow Mode Switch *************/
+        if((ENABLE == stDebug.ReadData.wQVPFFlag)
+		|| (ENABLE == stDspReceData.unFuncEnable.bit.ExportLimit || ENABLE == stDspReceData.unFuncEnable.bit.MultiExportLimit))
         {
-            uwAntiRate = 2;
-        }
-        else
-        {
-            uwAntiRate = 2;
-        }
-        if(udCtActivePowerAvg > AC1500W)
-        {
-            stMpptDisturb[uwPVIndex].dAntiStep = VDC8V * uwAntiRate / stMpptTskCtrl.uwPVONNum;
-        }
-        else if(udCtActivePowerAvg > AC1000W)
-        {
-            stMpptDisturb[uwPVIndex].dAntiStep = VDC6V * uwAntiRate / stMpptTskCtrl.uwPVONNum;
-        }
-        else if(udCtActivePowerAvg > AC700W)
-        {
-            stMpptDisturb[uwPVIndex].dAntiStep = VDC0_6V * uwAntiRate / stMpptTskCtrl.uwPVONNum;
-        }
-        else if(udCtActivePowerAvg > AC500W)
-        {
-            stMpptDisturb[uwPVIndex].dAntiStep = VDC0_2V * uwAntiRate / stMpptTskCtrl.uwPVONNum;
-        }
-        else if(udCtActivePowerAvg > AC200W)
-        {
-            if(stMpptTskCtrl.uwPVConnect[PVA] == TRUE)
+			stMpptDisturb[uwPVIndex].uwAntiFlowCnt ++;
+            stMpptDisturb[uwPVIndex].uwFastMpptFlag = 1;			// 关闭快追
+			stMpptDisturb[uwPVIndex].unMpptBits.bit.OverPower = 1;
+
+            if((stLoadLimit.dActPowerLimitOutput - stACSample.dActivePower) > AC200W)       //wMpptVoltRef-- 1000
             {
-                stMpptDisturb[uwPVIndex].dAntiStep = VDC0_1V;
+                stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = ANTIFLOW_Loading;
             }
-        }
-        if(stDebug.ReadData.wQVPFFlag == 1)
-        {
-            stMpptDisturb[uwPVIndex].uwFastMpptFlag = 1;
-            if((stLoadLimit.dActPowerLimitOutput - stACSample.dActivePowerAvg)>AC700W)       //wMpptVoltRef-- 1000
+            else if((stLoadLimit.dActPowerLimitOutput - stACSample.dActivePower) > 0)     //stop Tracking 1000
             {
-                stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = 2;
+                stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = ANTIFLOW_Stop;
+				stMpptDisturb[uwPVIndex].dAntiStep = 0;
+				return;
             }
-            else if((stLoadLimit.dActPowerLimitOutput - stACSample.dActivePowerAvg)>-AC700W)     //stop Tracking 1000
+            else if((stLoadLimit.dActPowerLimitOutput - stACSample.dActivePower) < -AC200W)     //wMpptVoltRef++  1000
             {
-                stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = 1;
-            }
-            else if((stLoadLimit.dActPowerLimitOutput - stACSample.dActivePowerAvg)<-AC700W)     //wMpptVoltRef++  1000
-            {
-                stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = 0;
+                stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = ANTIFLOW_DownLoading;
             }
         }
         else
         {
-            stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = 3;
+            stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = ANTIFLOW_NormalMppt;
         }
-    }
+
+		/************* AntiFlow Step Calculation *************/
+		if(ANTIFLOW_Loading == stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower)
+		{
+			// 大载，斜率跟踪
+			if (stLoadLimit.dActPowerLimitOutput > (AC10000W*stMpptTskCtrl.uwPVONNum))
+			{   // Single Load > 12KW：0.8*P -5.8
+				uwVoltStepTmp = VDC0_8V*((stLoadLimit.dActPowerLimitOutput/stMpptTskCtrl.uwPVONNum)/AC1000W)-45;
+			}	
+			else if(stLoadLimit.dActPowerLimitOutput > (AC1000W*stMpptTskCtrl.uwPVONNum))
+			{   // Single Load > 1KW：2 + 0.15*P
+				uwVoltStepTmp = VDC2V + (((stLoadLimit.dActPowerLimitOutput/stMpptTskCtrl.uwPVONNum)/AC1000W)*15/10);
+			}   // Low Load
+			else if((stLoadLimit.dActPowerLimitOutput <= (AC1000W*stMpptTskCtrl.uwPVONNum))
+					&& (stLoadLimit.dActPowerLimitOutput > AC1000W))
+			{
+				uwVoltStepTmp = VDC1V;
+			}
+		}
+		else if(ANTIFLOW_DownLoading == stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower)
+		{
+			// 大载，斜率跟踪
+			if (stACSample.dActivePower > (AC10000W*stMpptTskCtrl.uwPVONNum))
+			{   // Single Load > 12KW：0.8*P -5.8
+				uwVoltStepTmp = VDC0_8V*((stACSample.dActivePower/stMpptTskCtrl.uwPVONNum)/AC1000W)-45;
+			}	
+			else if(stACSample.dActivePower > (AC1000W*stMpptTskCtrl.uwPVONNum))
+			{   // Single Load > 1KW：2 + 0.15*P
+				uwVoltStepTmp = VDC2V + (((stACSample.dActivePower/stMpptTskCtrl.uwPVONNum)/AC1000W)*15/10);
+			}   // Low Load
+			else if((stACSample.dActivePower <= (AC1000W*stMpptTskCtrl.uwPVONNum))
+					&& (stACSample.dActivePower > AC1000W))
+			{
+				uwVoltStepTmp = VDC1V;
+			}
+			else
+			{
+				uwVoltStepTmp = VDC1V;
+			}
+		}
+
+
+		/************* Adjust the step size based on errors *************/
+		udCtActivePowerAvg = labs(stLoadLimit.dActPowerLimitOutput - stACSample.dActivePower);
+
+		if(udCtActivePowerAvg > AC8000W)
+		{
+			stMpptDisturb[uwPVIndex].dAntiStep = uwVoltStepTmp;
+		}
+		else if(stLoadLimit.dActPowerLimitOutput <= AC300W
+		&&  ANTIFLOW_DownLoading == stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower)
+		{
+			stMpptDisturb[uwPVIndex].dAntiStep = uwVoltStepTmp;
+		}
+		else if(stLoadLimit.dActPowerLimitOutput < AC1000W
+		&&  ANTIFLOW_Loading == stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower)
+		{
+			if(PVA == uwPVIndex)
+			{	// 极小载，单路追踪
+				for(uwPVIndexTmp = 0; uwPVIndexTmp < PV_MAX_NUM; uwPVIndexTmp++)
+				{
+					stMpptDisturb[uwPVIndexTmp].dAntiStep = 0;
+				}
+				for(uwPVIndexTmp = 0; uwPVIndexTmp < PV_MAX_NUM; uwPVIndexTmp++)
+				{
+					if(TRUE == stMpptTskCtrl.uwBTOnOff[uwPVIndexTmp])
+					{
+						stMpptDisturb[uwPVIndexTmp].dAntiStep = VDC0_1V;
+						break;
+					}
+				}
+			}
+		}
+		else
+		{
+			uwVoltStepTmp -= stMpptTskCtrl.uwPVONNum;
+
+			if(udCtActivePowerAvg > AC2000W)
+			{
+				stMpptDisturb[uwPVIndex].dAntiStep = uwVoltStepTmp >> 1;
+			}
+			else if(udCtActivePowerAvg > AC200W)
+			{
+				stMpptDisturb[uwPVIndex].dAntiStep = VDC0_1V;
+			}
+			else if(udCtActivePowerAvg < AC100W)
+			{
+				stMpptDisturb[uwPVIndex].dAntiStep = 0;
+			}
+		}
+	}
     else
     {
+		stMpptDisturb[uwPVIndex].dAntiStep = 0;
         stMpptDisturb[uwPVIndex].uwAntiFlowCnt = 0;
-        stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = 3;
+        stMpptDisturb[uwPVIndex].unMpptBits.bit.AntiOverPower = ANTIFLOW_NormalMppt;
     }
 }
 
@@ -209,7 +276,11 @@ static void TrackingMppt(ST_MPPT_DISTURB *pstMpptDisturb, ST_MPPT_PARA *pstMpptP
  				{
  					pstMpptDisturb->uwMpptTrackInitCnt = 0;
  					pstMpptDisturb->wMpptVoltRefOld = pstMpptPara->wPVVolt;
- 					pstMpptDisturb->wMpptVoltRef = pstMpptPara->wPVVolt - 200;
+					if(DISABLE == stDspReceData.unFuncEnable.bit.ExportLimit 
+					&& DISABLE == stDspReceData.unFuncEnable.bit.MultiExportLimit)
+					{
+ 						pstMpptDisturb->wMpptVoltRef = pstMpptPara->wPVVolt - 200;			//		pstMpptDisturb->wMpptVoltRef = pstMpptPara->wPVVolt - 100;
+					}
  					pstMpptDisturb->eTrackStatus = Runing;
  					/***************ZeroPower Flag & Counter Clear Zero***************/
  					pstMpptDisturb->unMpptBits.bit.ZeroPower = 0;
@@ -256,30 +327,37 @@ static void TrackingMppt(ST_MPPT_DISTURB *pstMpptDisturb, ST_MPPT_PARA *pstMpptP
 					pstMpptDisturb->uwMpptTrackInitCnt = 0;
 				}
  			}
-			else if(pstMpptDisturb->unMpptBits.bit.AntiOverPower != 3)
+			else if(pstMpptDisturb->unMpptBits.bit.AntiOverPower != ANTIFLOW_NormalMppt)
             {
-                if(pstMpptDisturb->uwAntiFlowCnt > ANTIFLOW_TIME)
+
+				if(ANTIFLOW_DownLoading == pstMpptDisturb->unMpptBits.bit.AntiOverPower)
+				{
+					stDebug.ReadData.wDebug7[5] = stLoadLimit.dActPowerLimitOutput*25/stLoadLimit.dActivePower;
+				}
+				else
+				{
+					stDebug.ReadData.wDebug7[5] = 25 - (stLoadLimit.dActPowerLimitOutput*25/stLoadLimit.dActivePower);
+				}
+				UPDNLMT(stDebug.ReadData.wDebug7[5], 25, 2);
+
+                if(pstMpptDisturb->uwAntiFlowCnt > stDebug.ReadData.wDebug7[5])
                 {
                     pstMpptDisturb->uwAntiFlowCnt = 0;
-                    if(pstMpptDisturb->unMpptBits.bit.AntiOverPower == 2)
+					pstMpptDisturb->dMpptPowerOld = pstMpptDisturb->dMpptPower;
+                    pstMpptDisturb->wMpptVoltRefOld = pstMpptDisturb->wMpptVoltRef;
+                    if(pstMpptDisturb->unMpptBits.bit.AntiOverPower == ANTIFLOW_Loading)
                     {
-                        pstMpptDisturb->dMpptPowerOld = pstMpptDisturb->dMpptPower;
-                        pstMpptDisturb->wMpptVoltRefOld = pstMpptDisturb->wMpptVoltRef;
                         pstMpptDisturb->wMpptVoltRef -= pstMpptDisturb->dAntiStep;
-                        UPDNLMT(pstMpptDisturb->wMpptVoltRef, MPPT_VOLT_MAX, MPPT_VOLT_MIN);
+                        UPDNLMT(pstMpptDisturb->wMpptVoltRef, pstMpptPara->wPVOpenVolt, MPPT_VOLT_MIN);
                     }
-                    else if(pstMpptDisturb->unMpptBits.bit.AntiOverPower == 1)
+                    else if(pstMpptDisturb->unMpptBits.bit.AntiOverPower == ANTIFLOW_Stop)
                     {
-                        pstMpptDisturb->dMpptPowerOld = pstMpptDisturb->dMpptPower;
-                        pstMpptDisturb->wMpptVoltRefOld = pstMpptDisturb->wMpptVoltRef;
-                        UPDNLMT(pstMpptDisturb->wMpptVoltRef, MPPT_VOLT_MAX, MPPT_VOLT_MIN);
+                        UPDNLMT(pstMpptDisturb->wMpptVoltRef, pstMpptPara->wPVOpenVolt, MPPT_VOLT_MIN);
                     }
-                    else if(pstMpptDisturb->unMpptBits.bit.AntiOverPower == 0)
+                    else if(pstMpptDisturb->unMpptBits.bit.AntiOverPower == ANTIFLOW_DownLoading)
                     {
-                        pstMpptDisturb->dMpptPowerOld = pstMpptDisturb->dMpptPower;
-                        pstMpptDisturb->wMpptVoltRefOld = pstMpptDisturb->wMpptVoltRef;
                         pstMpptDisturb->wMpptVoltRef += pstMpptDisturb->dAntiStep;
-                        UPDNLMT(pstMpptDisturb->wMpptVoltRef, pstMpptPara->wPVOpenVolt + VDC1V, MPPT_VOLT_MIN);
+                        UPDNLMT(pstMpptDisturb->wMpptVoltRef, pstMpptPara->wPVOpenVolt + VDC5V, MPPT_VOLT_MIN);
                     }
                 }
             }

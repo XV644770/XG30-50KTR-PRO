@@ -78,7 +78,9 @@
 #define VDC3V						30
 #define VDC2V                       20
 #define VDC1V						10
+#define VDC0_8V						8
 #define VDC0_6V						6
+#define VDC0_5V						5
 #define VDC0_4V                     4
 #define VDC0_3V                     3
 #define VDC0_2V                     2
@@ -103,8 +105,11 @@
 #define AC1500W                     15000
 #define AC1800W                     18000
 #define AC2000W                     20000
+#define AC3000W                     30000
 #define AC4000W						40000
+#define AC6000W						60000
 #define AC8000W						80000
+#define AC10000W					100000
 #define AC12000W					120000
 /********************DC WATT**********************************/
 #define MPPT5W						500
