@@ -99,7 +99,7 @@ Uint16 uwReadHoldingReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwTxBuf)
 			case 0x304F:		uwTransmitData = stInvCurrCtrl.stIn.dReCtrl_KPR1;			break;
 			case 0x3050:		uwTransmitData = stInvCurrCtrl.stIn.dReCtrl_KPR2;			break;
 			case 0x3051:		uwTransmitData = stInvCurrCtrl.stIn.ReCtrl_Enable;			break; 
-			case 0x3052:		uwTransmitData = stDebug.SetData.unSetReg.bit.PWMMode;	    break;
+			case 0x3052:		uwTransmitData = stInvCurrCtrl.stIn.Rectrl_Points;	    break;
 
 			/*****************Read --- Fan Test Message****************************/
 			case 0x3053:		uwTransmitData = stFan.unFlagBits[FAN1_EXTR].bit.OnOff;		break;
@@ -175,9 +175,19 @@ Uint16 uwReadHoldingReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwTxBuf)
 			case 0x3069:	uwTransmitData =stMachineCfg.wInvTempOver;					break;
 			case 0x306A:	uwTransmitData =stMachineCfg.wAmbTempOver;					break;
 			case 0x306B:	uwTransmitData =stMachineCfg.wBoostTempOver;				break;
-			case 0x306C:	uwTransmitData = stDebug.SetData.unSetReg.bit.OpenLoopUnlock;		break;
-			case 0x306D:	uwTransmitData = stDebug.SetData.unSetReg.bit.OpenLoopEnable;		break;
 
+			/*********************************** DCI *************************************/
+			case 0x306C:		uwTransmitData = stDebug.ReadData.wDebug7[0];		break;
+			case 0x306D:		uwTransmitData = stDebug.ReadData.wDebug7[1];		break;
+			case 0x306E:		uwTransmitData = stDebug.ReadData.wDebug7[2];		break;
+			case 0x306F:		uwTransmitData = stDebug.ReadData.wDebug7[3];		break;
+			case 0x3070:		uwTransmitData = stDebug.ReadData.wDebug7[4];		break;
+			/*********************************** 防逆流 *************************************/
+			case 0x3071:		uwTransmitData = stDebug.ReadData.wDebug7[5];		break;
+			case 0x3072:		uwTransmitData = stDebug.ReadData.wDebug7[6];		break;
+			/*********************************** 无功 *************************************/
+			case 0x3073:		uwTransmitData = stDebug.ReadData.wDebug7[7];		break;
+			case 0x3074:		uwTransmitData = stDebug.ReadData.wDebug7[8];		break;
 			/*****************Read --- Parameters Inputing Register****************************/
 			case 0x3800:		uwTransmitData = SOFTWARE_FORMAL*100+SOFTWARE_TEST;		break;
 			case 0x3801:		uwTransmitData = stF042Para.uwSoftWareVersion;			break;
@@ -217,8 +227,8 @@ Uint16 uwReadHoldingReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwTxBuf)
 
 			case 0x3823: 		uwTransmitData = (stACSample.dActivePowerAvg>>16);				break;
 			case 0x3824: 		uwTransmitData = (stACSample.dActivePowerAvg&0xffff);			break;
-			case 0x3825: 		uwTransmitData = (stACSample.dReactivePower>>16);				break;
-			case 0x3826: 		uwTransmitData = (stACSample.dReactivePower&0xffff);			break;
+			case 0x3825: 		uwTransmitData = (stACSample.dReactivePowerAvg>>16);				break;
+			case 0x3826: 		uwTransmitData = (stACSample.dReactivePowerAvg&0xffff);			break;
 			case 0x3827: 		uwTransmitData = (stACSample.dApparentPowerAvg>>16);			break;
 			case 0x3828: 		uwTransmitData = (stACSample.dApparentPowerAvg&0xffff);			break;
 			case 0x3829: 		uwTransmitData = stACSample.wPowerFactor;						break;
@@ -282,29 +292,34 @@ Uint16 uwReadHoldingReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwTxBuf)
 			case 0x385F:		uwTransmitData = 111;			break;
 			case 0x3860:		uwTransmitData = stPllPara.stOut.uwPllOk;			break;
 
-			case 0x3861:		uwTransmitData = EPwm1Regs.CMPA.bit.CMPA;			break;
-			case 0x3862:		uwTransmitData = EPwm1Regs.AQCSFRC.all;			break;
-			case 0x3863:		uwTransmitData = EPwm8Regs.CMPA.bit.CMPA;			break;
-			case 0x3864:		uwTransmitData = EPwm8Regs.AQCSFRC.all;			break;
-			case 0x3865:		uwTransmitData = stAfciPara1.uwCurrCH1;		break;
-			case 0x3866:		uwTransmitData = stAfciPara1.uwCurrCH2;			break;
-			case 0x3867:		uwTransmitData = stAfciPara1.uwCurrCH3;		break;
-			case 0x3868:		uwTransmitData = stAfciPara1.uwCurrCH4;		break;
-			case 0x3869:		uwTransmitData = stAfciPara1.uwArcRecordCH1;		break;
-			case 0x386A:		uwTransmitData = stAfciPara1.uwArcRecordCH2;		break;
-			case 0x386B:		uwTransmitData = stAfciPara1.uwArcRecordCH3;		break;
-
-			case 0x386C:		uwTransmitData = stAfciPara1.uwArcRecordCH4;		break;
-			case 0x386D:		uwTransmitData = stAfciPara1.uwSelfCheckResult;			break;
-			case 0x386E:		uwTransmitData =stAfciPara1.uwArcFaultLimit;	break;
-			case 0x386F:		uwTransmitData = 666;			break;
-
-			case 0x3870:		uwTransmitData = stMachineCfg.wHardInvOCPCap;	break;
-			case 0x3871:		uwTransmitData = stWaitStatus.stRelayCheck.Flag.Success;	break;
-			case 0x3872:		uwTransmitData = stWaitStatus.stRelayCheck.Flag.Fail;		break;
-			case 0x3873:		uwTransmitData = stWaitStatus.stRelayCheck.Flag.InvPwmOn;				break;
-			case 0x3874:		uwTransmitData = stAfciPara2.uwArcFaultBit;		break;
-			case 0x3875:		uwTransmitData = stWaitStatus.stRelayCheck.Flag.InvCurrOver;		break;
+			case 0x3861:		uwTransmitData = stDebug.ReadData.wDebug5[1];			break;
+			case 0x3862:		uwTransmitData = stDebug.ReadData.wDebug5[2];			break;
+			case 0x3863:		uwTransmitData = stDebug.ReadData.wDebug5[3];			break;
+			case 0x3864:		uwTransmitData = stDebug.ReadData.wDebug5[4];			break;
+			case 0x3865:		uwTransmitData = stMpptDisturb[PVA].unMpptBits.bit.OverPower &
+												 stMpptDisturb[PVB].unMpptBits.bit.OverPower &
+												 stMpptDisturb[PVC].unMpptBits.bit.OverPower &
+												 stMpptDisturb[PVD].unMpptBits.bit.OverPower;		break;
+			case 0x3866:		uwTransmitData = stMpptDisturb[PVA].uwFastMpptFlag &
+												 stMpptDisturb[PVB].uwFastMpptFlag &
+												 stMpptDisturb[PVC].uwFastMpptFlag &
+												 stMpptDisturb[PVD].uwFastMpptFlag;			break;
+			/******************************** Anti Flow *****************************************/
+			case 0x3867:		uwTransmitData = stMpptDisturb[PVA].unMpptBits.bit.AntiOverPower;		break;
+			case 0x3868:		uwTransmitData = stMpptDisturb[PVB].unMpptBits.bit.AntiOverPower;		break;
+			case 0x3869:		uwTransmitData = stMpptDisturb[PVC].unMpptBits.bit.AntiOverPower;		break;
+			case 0x386A:		uwTransmitData = stMpptDisturb[PVD].unMpptBits.bit.AntiOverPower;		break;
+			case 0x386B:		uwTransmitData = stMpptDisturb[PVA].dAntiStep;		break;
+			case 0x386C:		uwTransmitData = stMpptDisturb[PVB].dAntiStep;		break;
+			case 0x386D:		uwTransmitData = stMpptDisturb[PVC].dAntiStep;		break;
+			case 0x386E:		uwTransmitData = stMpptDisturb[PVD].dAntiStep;		break;
+			case 0x386F:		uwTransmitData = stPVVoltCtrl[PVA].stPID.stIn.dPIMax;			break;
+			case 0x3870:		uwTransmitData = stPVVoltCtrl[PVB].stPID.stIn.dPIMax;	break;
+			case 0x3871:		uwTransmitData = stPVVoltCtrl[PVC].stPID.stIn.dPIMax;	break;
+			case 0x3872:		uwTransmitData = stPVVoltCtrl[PVD].stPID.stIn.dPIMax;		break;
+			case 0x3873:		uwTransmitData = stReactivePowerCtrl.stOut.dCtrlLoopOutput;				break;
+			case 0x3874:		uwTransmitData = (stLoadLimit.dReactivePowerRef>>16);		break;
+			case 0x3875:		uwTransmitData = (stLoadLimit.dReactivePowerRef&0xffff);		break;
 			case 0x3876:		uwTransmitData = stInvPwm.uwHardInvOCPTimes;			break;
 			case 0x3877:		uwTransmitData = stInvPwm.uwHardBoostOCPTimes;			break;
 			case 0x3878:		uwTransmitData = stInvPwm.uwSoftUnderVoltTimes;			break;
@@ -648,11 +663,11 @@ Uint16 uwSetMultipleReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwRxBuf)
 			case 0x304C:	stMachineCfg.wAmbDerateStep = uwSetValueTmp;		break;
 			case 0x304D:	stMachineCfg.wAmbDerateBackStep = uwSetValueTmp;	break;
 
-			case 0x304E:	 stInvCurrCtrl.stIn.dReCtrl_KPR= uwSetValueTmp;			break;
-			case 0x304F: stInvCurrCtrl.stIn.dReCtrl_KPR1= uwSetValueTmp;			break;
-			case 0x3050:	 stInvCurrCtrl.stIn.dReCtrl_KPR2= uwSetValueTmp;			break;
-			case 0x3051:	 stInvCurrCtrl.stIn.ReCtrl_Enable = uwSetValueTmp;		break; 
-			case 0x3052:	stDebug.SetData.unSetReg.bit.PWMMode= uwSetValueTmp;		break;
+			case 0x304E:	stInvCurrCtrl.stIn.dReCtrl_KPR= uwSetValueTmp;			break;
+			case 0x304F: 	stInvCurrCtrl.stIn.dReCtrl_KPR1= uwSetValueTmp;			break;
+			case 0x3050:	stInvCurrCtrl.stIn.dReCtrl_KPR2= uwSetValueTmp;			break;
+			case 0x3051:	stInvCurrCtrl.stIn.ReCtrl_Enable = uwSetValueTmp;		break; 
+			case 0x3052:	stInvCurrCtrl.stIn.Rectrl_Points= uwSetValueTmp;		break;
 			/*****************Read --- Fan Test Message****************************/
 			case 0x3053:	 stFan.unFlagBits[FAN1_EXTR].bit.OnOff= uwSetValueTmp;		break;
 			case 0x3054:	 stFan.unFlagBits[FAN1_EXTR].bit.FanTest = uwSetValueTmp;		break;
@@ -684,29 +699,18 @@ Uint16 uwSetMultipleReg(Uint16 uwRegAddr,Uint16 uwRegNum,Uint16* puwRxBuf)
 			case 0x3069:	stMachineCfg.wInvTempOver= uwSetValueTmp;	break;
 			case 0x306A:	stMachineCfg.wAmbTempOver= uwSetValueTmp;	break;
 			case 0x306B:	stMachineCfg.wBoostTempOver= uwSetValueTmp;	break;
-			case 0x306C:
-				if((0xAA55 == uwSetValueTmp) && (cInverterStatus != eInverterStatus))
-				{
-					stDebug.SetData.unSetReg.bit.OpenLoopUnlock = ENABLE;
-				}
-				else
-				{
-					stDebug.SetData.unSetReg.bit.OpenLoopUnlock = DISABLE;
-					stDebug.SetData.unSetReg.bit.OpenLoopEnable = DISABLE;
-				}
-			break;
-			case 0x306D:
-				if((ENABLE == stDebug.SetData.unSetReg.bit.OpenLoopUnlock) && (ENABLE == uwSetValueTmp))
-				{
-					stDebug.SetData.unSetReg.bit.OpenLoopEnable = uwSetValueTmp;
-				}
-				else
-				{
-					stDebug.SetData.unSetReg.bit.OpenLoopUnlock = DISABLE;
-					stDebug.SetData.unSetReg.bit.OpenLoopEnable = DISABLE;
-				}
-			break;
 
+			/************************** DCI ******************************/
+			case 0x306C:	stDebug.ReadData.wDebug7[0] = uwSetValueTmp;		break;
+			case 0x306D:	stDebug.ReadData.wDebug7[1] = uwSetValueTmp;		break;
+			case 0x306E:	stDebug.ReadData.wDebug7[2] = uwSetValueTmp;		break;
+			case 0x306F:	stDebug.ReadData.wDebug7[3] = uwSetValueTmp;		break;
+			case 0x3070:	stDebug.ReadData.wDebug7[4] = uwSetValueTmp;		break;
+			/************************ Anti Flow **************************/
+			case 0x3071:	stDebug.ReadData.wDebug7[5] = uwSetValueTmp;		break;
+			case 0x3072:	stDebug.ReadData.wDebug7[6] = uwSetValueTmp;		break;
+			case 0x3073:	stDebug.ReadData.wDebug7[7] = uwSetValueTmp;		break;
+			case 0x3074:	stDebug.ReadData.wDebug7[8] = uwSetValueTmp;		break;
 			default:
 			{
 				uwSetResultTmp = 0;

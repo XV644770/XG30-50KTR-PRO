@@ -657,6 +657,14 @@ void InitDebugData(void)
 	stWaveRecord.uwWaveID[1] = 1;
 	stWaveRecord.uwWaveID[2] = 2;
 	stWaveRecord.uwWaveID[3] = 3;
+	/************** DCI ***************/
+	stDebug.ReadData.wDebug7[0] = 1;
+	stDebug.ReadData.wDebug7[1] = 4;
+	stDebug.ReadData.wDebug7[2] = 800;
+	stDebug.ReadData.wDebug7[3] = 1200;
+	/************** DCI ***************/
+	stDebug.ReadData.wDebug7[5] = 1;
+	stDebug.ReadData.wDebug7[6] = 0;
 }
 
 void ComDebugTask(void)

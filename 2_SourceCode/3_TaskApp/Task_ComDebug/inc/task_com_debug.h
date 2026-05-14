@@ -110,8 +110,9 @@ typedef	struct{
     int16   wDebug8;
 	
     int16   wDebug4[10];
-    int16   wDebug5[10];
+    int16   wDebug5[20];
     int16   wDebug6[20];
+	int16   wDebug7[20];
 	int16	wQvPFValue;
     int32	dMeterPower;
     int16   wInvVoltLack;
