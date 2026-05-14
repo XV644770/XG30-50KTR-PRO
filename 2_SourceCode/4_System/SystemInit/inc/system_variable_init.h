@@ -1357,6 +1357,7 @@ typedef struct
 	int16 wACVoltFaultMax;
 	int16 wACVoltFaultMin;
 	int32 Rated_CapCurrPeak; 					//Reactive power compensation //mgs/20220907
+	int16 wCapCurrCoeff;						//Q15 ratio: Ip_cap/Vp_phase*32768, for instantaneous cap current estimate
 
 	// DCI
 	Uint16 uwDCILimit100T;

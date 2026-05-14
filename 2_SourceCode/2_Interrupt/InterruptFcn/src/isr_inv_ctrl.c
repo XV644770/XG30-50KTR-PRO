@@ -372,7 +372,7 @@ void InvCurrLoopCtrl(void)
 									         + swCurr_dPI + stInvCurrCtrl.stIn.ReCtrl_Val_Id);
 		
 	/***********************************Inv Curr_q Control Loop**********************************************/
-		stInvCurrCtrl.stIn.wCurr_q = (stLoadLimit.wVoltReactiveCurrLimit+stPllPara.wIslandDisturb+stSysCfg.Rated_CapCurrPeak);
+		stInvCurrCtrl.stIn.wCurr_q = (stLoadLimit.wVoltReactiveCurrLimit+stPllPara.wIslandDisturb);
 		UPDNLMT(stInvCurrCtrl.stIn.wCurr_q,stSysCfg.wReactiveCurrMaxLimit,-stSysCfg.wReactiveCurrMaxLimit);							// 320/32 = 10.0A
 		wCurr_qErrTmp = stInvCurrCtrl.stIn.wCurr_q-stInvPara.wCurr_q;
 	

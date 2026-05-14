@@ -357,6 +357,10 @@ void CalcAdcRealValueSum(void)
 	static Uint16 suwMux8Ch4SumCntTmp=0,	suwMux8Ch5SumCntTmp=0,	suwMux8Ch6SumCntTmp=0,	suwMux8Ch7SumCntTmp=0;
 	static Uint16 suwGridZeroIsrCnt=0;
 	Uint16 uwRSTVoltZeroTmp;
+	// clac Q
+	Uint16 uwIdx;
+	int16  wRVoltDelayed, wSVoltDelayed, wTVoltDelayed;
+	int16  wRCapCurr, wSCapCurr, wTCapCurr;
 
 
 	if(stPllPara.stOut.uwGridPrdCnt == 0)
@@ -434,6 +438,10 @@ void CalcAdcRealValueSum(void)
 			// Active Power Sum
 			stAdcPool.ActivePower.dAddSum = stAdcPool.ActivePower.dAddSumIsr;
 			stAdcPool.ActivePower.dAddSumIsr = 0;
+
+			// Reactive Power Sum (1/4T delay method)
+			stAdcPool.ReactivePower.dAddSum = stAdcPool.ReactivePower.dAddSumIsr;
+			stAdcPool.ReactivePower.dAddSumIsr = 0;
 
 			// GFCI Average 
 			stAdcPool.GFCI.dAddSum = stAdcPool.GFCI.dAddSumIsr;
@@ -714,6 +722,39 @@ void CalcAdcRealValueSum(void)
 											  +((int32)stAdcPool.TGridVolt.wArithVal * stAdcPool.TInvCurr.wArithVal>>6));
 		// Active Power Sum Calculate
 		stAdcPool.ActivePower.dAddSumIsr += stAdcPool.ActivePower.dOffsetSumIsr;
+
+		// Reactive Power Calculate (1/4T delay method)
+		// Q = 1/T * integral{ u(t-T/4) * i(t) dt }
+		{
+			uwIdx = stAdcPool.uwDelayBufIdx;
+
+			// 1. Read delayed voltage (T/4 ago) from circular buffer
+			wRVoltDelayed = stAdcPool.wRVoltDelayBuf[uwIdx];
+			wSVoltDelayed = stAdcPool.wSVoltDelayBuf[uwIdx];
+			wTVoltDelayed = stAdcPool.wTVoltDelayBuf[uwIdx];
+
+			// 2. u(t-T/4) * i(t) accumulate + capacitor current compensation
+			wRCapCurr = (int16)((int32)wRVoltDelayed * stSysCfg.wCapCurrCoeff >> 15);	// = -I_cap_R(t)
+			wSCapCurr = (int16)((int32)wSVoltDelayed * stSysCfg.wCapCurrCoeff >> 15);	// = -I_cap_S(t)
+			wTCapCurr = (int16)((int32)wTVoltDelayed * stSysCfg.wCapCurrCoeff >> 15);	// = -I_cap_T(t)
+			stAdcPool.ReactivePower.dOffsetSumIsr = (((int32)wRVoltDelayed * (stAdcPool.RInvCurr.wArithVal + wRCapCurr) >> 6)
+													+((int32)wSVoltDelayed * (stAdcPool.SInvCurr.wArithVal + wSCapCurr) >> 6)
+													+((int32)wTVoltDelayed * (stAdcPool.TInvCurr.wArithVal + wTCapCurr) >> 6));
+			stAdcPool.ReactivePower.dAddSumIsr += stAdcPool.ReactivePower.dOffsetSumIsr;
+
+			// 3. Overwrite buffer position with current voltage
+			stAdcPool.wRVoltDelayBuf[uwIdx] = stAdcPool.RGridVolt.wArithVal;
+			stAdcPool.wSVoltDelayBuf[uwIdx] = stAdcPool.SGridVolt.wArithVal;
+			stAdcPool.wTVoltDelayBuf[uwIdx] = stAdcPool.TGridVolt.wArithVal;
+
+			// 4. Advance circular index
+			uwIdx++;
+			if(uwIdx >= stAdcPool.uwDelayLength)
+			{
+				uwIdx = 0;
+			}
+			stAdcPool.uwDelayBufIdx = uwIdx;
+		}
 
 		// SofrWare DCI
 		stAdcPool.RSoftDCI.dAddSumIsr += (stAdcPool.RInvCurr.wArithVal);

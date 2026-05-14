@@ -6,6 +6,7 @@
  */
 
 #include "dsp_user_include.h"
+#include <math.h>
 
 ST_AC_SAMPLE stACSample;
 
@@ -29,6 +30,13 @@ void CalcACVoltCurrRms(void)
 	stACSample.PhaseVoltRms.wRN = (uwCalcRms(stAdcPool.RGridVolt.dSquareAddSum,stAdcPool.uwSumCnt)*5)>>1;	// sqrt(2^4) = 4*5/2 = 10
 	stACSample.PhaseVoltRms.wSN = (uwCalcRms(stAdcPool.SGridVolt.dSquareAddSum,stAdcPool.uwSumCnt)*5)>>1;	// sqrt(2^4) = 4*5/2 = 10
 	stACSample.PhaseVoltRms.wTN = (uwCalcRms(stAdcPool.TGridVolt.dSquareAddSum,stAdcPool.uwSumCnt)*5)>>1;	// sqrt(2^4) = 4*5/2 = 10
+
+	// Update delay length for reactive power (1/4 cycle), unconditional - must be set before ISR uses it
+	stAdcPool.uwDelayLength = stAdcPool.uwSumCnt >> 2;	// delay length = sample number / 4
+	if(stAdcPool.uwDelayLength > DELAY_BUF_MAX)
+	{
+		stAdcPool.uwDelayLength = DELAY_BUF_MAX;
+	}
 
 	wGridLineVoltTmp = (uwCalcRms(stAdcPool.RSGridVolt.dSquareAddSum,stAdcPool.uwSumCnt)*5)>>1;	// sqrt(2^4) = 4*5/2 = 10
 	stACSample.LineVoltRms.wRS = (int16)((int32)wGridLineVoltTmp*stF107Data.wRSVoltAdjRatio/10000);
@@ -136,7 +144,10 @@ void CalcACVoltCurrRms(void)
 	{
 	    stACSample.wGridFreqReal = stGridFreq.wGridFreqMax;
 	}
-	stSysCfg.Rated_CapCurrPeak = (((int32)stACSample.wLineVoltRmsMax * 63)>>14) ;// 2*PI*F*C*U,U=u/sqrt3*sqrt2
+	// stSysCfg.Rated_CapCurrPeak = (((int32)stACSample.wLineVoltRmsMax * 63)>>14) ;// 2*PI*F*C*U,U=u/sqrt3*sqrt2
+	// wCapCurrCoeff = 2*PI*C*f*32768 (Q15), C~15uF; mult(Q15)=round(2*PI*C/100*32768^2)=round(0.0309*32768)=1012
+	stSysCfg.wCapCurrCoeff = (int16)((int32)stACSample.wGridFreqReal * 1012 >> 15);
+
 	if(0 == stInvPwm.unPwmDisableBit.bit.LowVoltThrough)
 	{
 		sdGridFreqSum += (int32)stACSample.wGridFreqReal;
@@ -175,13 +186,16 @@ void CalcACVoltCurrRms(void)
 void CalcOutputPower(void)
 {
 	static int16	wAcParaCalcCnt=0;
-	static int32	sdActivePowerSum=0,sdApparentPowerSum=0;
-	int32	dReactivePowerSquare;
+	static int32	sdActivePowerSum=0,sdApparentPowerSum=0,sdReactivePowerSum=0;
+	int32 dReactivePowerSquare = 0;
+	int16 wReactivePowerOffset = 0;
 	
 
 	if(cInverterStatus == eInverterStatus)
 	{
 		stACSample.dActivePower = ((stAdcPool.ActivePower.dAddSum/stAdcPool.uwSumCnt)*10)>>4;	// *10
+		wReactivePowerOffset = (int16)((float32)stACSample.dActivePower * (stLoadLimit.dActivePower/100) / stLoadLimit.dActivePower);
+		stACSample.dReactivePower = -(((stAdcPool.ReactivePower.dAddSum/stAdcPool.uwSumCnt)*10)>>4) + wReactivePowerOffset;	// *10, same scaling as active power
 		if(ATE_ADJUST_NORMAL == stF107Data.uwAdjustMode)
 		{
 			if(stACSample.dActivePower < (stLoadLimit.dActivePower>>1))
@@ -193,11 +207,14 @@ void CalcOutputPower(void)
 				stACSample.dActivePower = (((int32)stACSample.dActivePower*stF107Data.wActPower70AdjRatio)>>11);
 			}
 		}
-		stACSample.dApparentPower = ((int32)stACSample.PhaseVoltRms.wRN*stACSample.PhaseCurrRms.wRN
-									+(int32)stACSample.PhaseVoltRms.wSN*stACSample.PhaseCurrRms.wSN
-									+(int32)stACSample.PhaseVoltRms.wTN*stACSample.PhaseCurrRms.wTN)/100;
+		// claculation of Apparent Power
+		float32 fP = (float32)stACSample.dActivePower;
+		float32 fQ = (float32)stACSample.dReactivePower;
+		float32 fS = sqrtf(fP * fP + fQ * fQ);
+		stACSample.dApparentPower = (int32)fS;
 
 		sdActivePowerSum += stACSample.dActivePower;
+		sdReactivePowerSum += stACSample.dReactivePower;
 		sdApparentPowerSum += stACSample.dApparentPower;
 
 		wAcParaCalcCnt++;
@@ -205,8 +222,10 @@ void CalcOutputPower(void)
 		{
 			wAcParaCalcCnt = 0;
 			stACSample.dActivePowerAvg = (sdActivePowerSum>>5);
+			stACSample.dReactivePowerAvg = (sdReactivePowerSum>>5);
 			stACSample.dApparentPowerAvg = (sdApparentPowerSum>>5);
 			sdActivePowerSum = 0;
+			sdReactivePowerSum = 0;
 			sdApparentPowerSum = 0;
 
 			if(ATE_ADJUST_NORMAL != stF107Data.uwAdjustMode)
@@ -223,17 +242,21 @@ void CalcOutputPower(void)
 			if(stACSample.dActivePowerAvg > stACSample.dApparentPowerAvg)	// P>S; S=P
 			{
 				stACSample.dReactivePower = 0;
+				stACSample.dReactivePowerAvg = 0;
 				stACSample.dApparentPowerAvg = stACSample.dActivePowerAvg;
 				stACSample.wPowerFactor = 1000;			// PF = 1
 			}
 			else
 			{
 				/**********Q^2 = [(S^2)-(P^2)] = [(S+P)*(S-P)]*******/
-				dReactivePowerSquare = (((stACSample.dApparentPowerAvg+stACSample.dActivePowerAvg)>>4)
-									   *((stACSample.dApparentPowerAvg-stACSample.dActivePowerAvg)>>4));
-				stACSample.dReactivePower = uwCalcRms(dReactivePowerSquare,1);
-				stACSample.dReactivePower = stACSample.dReactivePower*16;
-				stACSample.wPowerFactor = (stACSample.dActivePowerAvg*1000/stACSample.dApparentPowerAvg);
+				if(stACSample.dApparentPowerAvg > 0)
+				{
+					stACSample.wPowerFactor = (int16)((float32)stACSample.dActivePowerAvg / (float32)stACSample.dApparentPowerAvg * 1000.0f);
+				}
+				else
+				{
+					stACSample.wPowerFactor = 1000;
+				}
 			}
 			UPDNLMT(stACSample.wPowerFactor,1000,-1000);
 
@@ -246,8 +269,10 @@ void CalcOutputPower(void)
 	{
 		sdApparentPowerSum = 0;
 		sdActivePowerSum = 0;
+		sdReactivePowerSum = 0;
 		wAcParaCalcCnt = 0;
 		stACSample.dActivePowerAvg = 0;
+		stACSample.dReactivePowerAvg = 0;
 		stACSample.dApparentPowerAvg=0;
 		stACSample.dReactivePower=0;
 		stACSample.dActivePower = 0;

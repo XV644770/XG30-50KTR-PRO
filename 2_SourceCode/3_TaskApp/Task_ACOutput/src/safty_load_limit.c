@@ -8,7 +8,7 @@
 #include "IQmathLib.h"
 
 ST_LOAD_LIMIT stLoadLimit;
-
+ST_CTRL_LOOP stReactivePowerCtrl;
 void LoadLimitParaInit(void)
 {
 	memset(&stLoadLimit,0,sizeof(stLoadLimit));
@@ -34,6 +34,16 @@ void LoadLimitParaInit(void)
 
 	stLoadLimit.wRatedActiveCurr = (stLoadLimit.dActivePower/stDspReceData.uwACNormalVolt)+1;
 	stLoadLimit.wRatedApparentCurr = (stLoadLimit.dApparentPower/stDspReceData.uwACNormalVolt)+1;
+
+	// 无功功率外环PID控制器初始化
+	memset(&stReactivePowerCtrl, 0, sizeof(stReactivePowerCtrl));
+	stReactivePowerCtrl.stPID.stIn.dKp = 120;
+	stReactivePowerCtrl.stPID.stIn.dKi = 20;
+	stReactivePowerCtrl.stPID.stIn.dPIMax =  128;
+	stReactivePowerCtrl.stPID.stIn.dPIMin = -128;
+
+	stDebug.ReadData.wDebug7[7] = stReactivePowerCtrl.stPID.stIn.dKp;
+	stDebug.ReadData.wDebug7[8] = stReactivePowerCtrl.stPID.stIn.dKi;
 }
 
 static void GridVoltActuraltPower(Uint16 uwRSTLineVoltMin)
@@ -946,18 +956,25 @@ static void InvCurrLimit(void)
 			// reactive power current limit
 			// Curr_qLimit(Q32)	32*1.414/1.732 = 26
 			wInvReactiveCurrRefTmp = (stLoadLimit.dReactivePowerRef*26)/stACSample.wLineVoltRmsMin;
-			if((swInvReactiveCurrRef+uwReactiveCurrStep)<wInvReactiveCurrRefTmp)
-			{
-				swInvReactiveCurrRef += uwReactiveCurrStep;		// 20ms ~ 0.5625A
-			}
-			else if(swInvReactiveCurrRef>(wInvReactiveCurrRefTmp+uwReactiveCurrStep))
-			{
-				swInvReactiveCurrRef -= uwReactiveCurrStep;		// 20ms ~ 0.5625A
-			}
-			else
-			{
-				swInvReactiveCurrRef = wInvReactiveCurrRefTmp;
-			}
+			/****************************************************************************
+            *   Description:    无功功率外环（使用IncrementalPID）
+            ***************************************************************/
+            {
+				stReactivePowerCtrl.stPID.stIn.dKp = stDebug.ReadData.wDebug7[7];
+				stReactivePowerCtrl.stPID.stIn.dKi = stDebug.ReadData.wDebug7[8];
+
+				stReactivePowerCtrl.stIn.uwCtrlLoopEnable = POSITIVE_PID;
+				stReactivePowerCtrl.stIn.dRef             = stLoadLimit.dReactivePowerRef;
+				stReactivePowerCtrl.stIn.dReal            = stACSample.dReactivePower;
+				stReactivePowerCtrl.stPID.stIn.dPIMax     =  128;
+				stReactivePowerCtrl.stPID.stIn.dPIMin     = -128;
+				IncrementalPID(&stReactivePowerCtrl);
+
+				// 无功电流前馈 + 电容电流前馈 + PI修正
+				swInvReactiveCurrRef = wInvReactiveCurrRefTmp + stReactivePowerCtrl.stOut.dCtrlLoopOutput;
+				UPDNLMT(swInvReactiveCurrRef, stSysCfg.wReactiveCurrMaxLimit, -stSysCfg.wReactiveCurrMaxLimit);
+            }
+			/****************************************************************************/
 		}
 	}
 	else
@@ -965,36 +982,10 @@ static void InvCurrLimit(void)
 		swInvReactiveCurrRef = 0;		// default Reactive current:0A
 		swInvActiveCurrRef = 64;		// default Active current:2A
 	}
-	swActivePowerPercentAdj = (int16)(stACSample.dActivePowerAvg*1000/stDspReceData.udOutputActivePower);
-	if(swActivePowerPercentAdj<0)
-	{
-		swActivePowerPercentAdj = 0;
-	}
-	if(swActivePowerPercentAdj < 100)
-	{
-		swInvReactiveCurrRefAdj = 15;
-	}
-	else if(swActivePowerPercentAdj < 500)
-	{
-		swInvReactiveCurrRefAdj = 39;
-	}
-	else if(swActivePowerPercentAdj < 900)
-	{
-		swInvReactiveCurrRefAdj = 34;
-	}
-	else
-	{
-		swInvReactiveCurrRefAdj = 30;
-	}
-
-	if(stSysCfg.uwFastDCMode == 1)
-	{
-		swInvReactiveCurrRefAdj = 0;
-	}
 
 
 //	stLoadLimit.wVoltReactiveCurrLimit = swInvReactiveCurrRef+40+stDebug.SetData.wIqRef;		// XG25-40KW(Offset_45) XG50-70KW(Offset_0)
-	stLoadLimit.wVoltReactiveCurrLimit = swInvReactiveCurrRef+swInvReactiveCurrRefAdj+stDebug.SetData.wIqRef;        // XG25-40KW(Offset_45) XG50-70KW(Offset_0)
+	stLoadLimit.wVoltReactiveCurrLimit = swInvReactiveCurrRef;        // XG25-40KW(Offset_45) XG50-70KW(Offset_0)
 	stLoadLimit.wVoltActiveCurrLimit = swInvActiveCurrRef;
 }
 

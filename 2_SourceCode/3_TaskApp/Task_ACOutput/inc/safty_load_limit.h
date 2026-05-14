@@ -81,6 +81,7 @@ typedef struct
 }ST_LOAD_LIMIT;
 
 extern ST_LOAD_LIMIT stLoadLimit;
+extern ST_CTRL_LOOP stReactivePowerCtrl;
 
 extern void LoadLimitParaInit(void);
 extern void InverterLoadLimit(void);

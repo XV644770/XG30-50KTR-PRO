@@ -67,10 +67,12 @@ typedef struct
 
     int32			dActivePowerAvg;
     int32			dApparentPowerAvg;
+    int32			dReactivePowerAvg;
 
     int32			d1DivGridTimFlt;
     int16			wEfficiency;
-
+    // Inv_Volt_Delay
+    Uint16			uwDelayLength;
 }ST_AC_SAMPLE;
 
 extern ST_AC_SAMPLE stACSample;

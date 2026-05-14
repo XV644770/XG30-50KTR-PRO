@@ -10,6 +10,8 @@
 #ifndef SOLAR_ADC_H
 #define SOLAR_ADC_H
 
+#define DELAY_BUF_MAX	128
+
 #if SAMPLE_DEBUG
 extern int16 suwSin0Tmp,suwSin120Tmp,suwSin240Tmp;
 #endif
@@ -115,6 +117,14 @@ typedef struct
 	// N-PE Voltage
 	ST_VAL_AC	NPEVolt;
 	ST_VAL_AC	ActivePower;
+	ST_VAL_AC	ReactivePower;			// Reactive Power (1/4T delay method)
+
+	// Voltage delay buffer for reactive power calculation
+	Uint16		uwDelayLength;			// 1/4 cycle delay length = uwSumCnt / 4
+	Uint16		uwDelayBufIdx;			// Circular buffer write index
+	int16		wRVoltDelayBuf[DELAY_BUF_MAX];	// R-phase voltage delay buffer
+	int16		wSVoltDelayBuf[DELAY_BUF_MAX];	// S-phase voltage delay buffer
+	int16		wTVoltDelayBuf[DELAY_BUF_MAX];	// T-phase voltage delay buffer
 
 	/* DC Sample Value*/
 	ST_VAL_DC	BusVolt;

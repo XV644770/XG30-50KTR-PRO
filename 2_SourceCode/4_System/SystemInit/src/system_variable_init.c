@@ -75,7 +75,9 @@ void SysParaInit(void)
 	stSysCfg.wACVoltFaultMax = PHASE_400V_MAX;
 	stSysCfg.dACVoltSqrtSumFaultMin = SQRT_SUM_400V_MIN;
 	stSysCfg.wACVoltFaultMin = PHASE_400V_MIN;
-	stSysCfg.Rated_CapCurrPeak = (((int32)stACSample.wLineVoltRmsMax * 63)>>14) ;// 2*PI*F*C*U,U=u/sqrt3*sqrt2
+	// stSysCfg.Rated_CapCurrPeak = (((int32)stACSample.wLineVoltRmsMax * 63)>>14) ;// 2*PI*F*C*U,U=u/sqrt3*sqrt2
+	// wCapCurrCoeff = 2*PI*C*f*32768 (Q15), C~15uF; mult(Q15)=round(2*PI*C/100*32768^2)=round(0.0309*32768)=1012; default 154 at init
+	stSysCfg.wCapCurrCoeff = (stACSample.wGridFreqReal > 0) ? (int16)((int32)stACSample.wGridFreqReal * 1012 >> 15) : 0;
 
 	unSysFlag.all = 0;
 }
